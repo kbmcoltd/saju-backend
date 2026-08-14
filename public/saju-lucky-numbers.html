@@ -1,0 +1,1498 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>사주행운 · 명리 기반 행운번호</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700;900&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#12151f;
+    --ink-2:#191d2b;
+    --card:#1d2233;
+    --card-line:#33395280;
+    --gold:#c8a24e;
+    --gold-soft:#e3c988;
+    --vermilion:#b23b34;
+    --teal:#3e6e64;
+    --cream:#efe7d6;
+    --muted:#8d93a8;
+    --danger:#d16a63;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse 60% 28% at 18% 12%, rgba(255,255,255,.65), transparent 62%),
+      radial-gradient(ellipse 65% 32% at 82% 8%, rgba(255,255,255,.55), transparent 60%),
+      radial-gradient(ellipse 75% 38% at 50% 88%, rgba(255,255,255,.7), transparent 60%),
+      radial-gradient(ellipse 50% 24% at 30% 55%, rgba(255,255,255,.35), transparent 65%),
+      linear-gradient(180deg, #a9cfec 0%, #c9e0f2 30%, #e6eef4 62%, #f7f1e6 100%);
+    background-attachment:fixed;
+    color:#2c2a3a;
+    font-family:'Noto Sans KR', sans-serif;
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    -webkit-font-smoothing:antialiased;
+  }
+  .app{
+    width:100%;
+    max-width:440px;
+    min-height:100vh;
+    padding:28px 20px 60px;
+    position:relative;
+  }
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    margin-bottom:6px;
+  }
+  .seal{
+    width:38px;height:38px;border-radius:8px;
+    background:linear-gradient(155deg,var(--vermilion),#8f2c26);
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Noto Serif KR',serif;font-weight:900;font-size:17px;
+    color:#f4e6c9;
+    box-shadow:0 4px 14px rgba(178,59,52,.35);
+    flex-shrink:0;
+  }
+  h1.title{
+    font-family:'Noto Serif KR',serif;
+    font-weight:700;
+    font-size:22px;
+    margin:0;
+    letter-spacing:.5px;
+    color:var(--vermilion);
+  }
+  .subtitle{
+    font-size:12.5px;
+    color:#5c6270;
+    margin:2px 0 0;
+    letter-spacing:.3px;
+  }
+  .rule{
+    height:2px;
+    margin:22px 0 24px;
+    background:linear-gradient(90deg, #e64c66, #f2954a, #f4d35e, #6fcf97, #4fb8e0, #bd6bd9);
+    opacity:.75;
+    border-radius:2px;
+  }
+  .card{
+    background:rgba(24,28,42,.74);
+    backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+    border:1px solid rgba(255,255,255,.09);
+    border-radius:16px;
+    padding:22px 20px;
+    margin-bottom:16px;
+    box-shadow:0 10px 30px rgba(0,0,0,.3);
+  }
+  .card h2{
+    font-family:'Noto Serif KR',serif;
+    font-size:17px;
+    margin:0 0 4px;
+    color:var(--gold-soft);
+  }
+
+  /* light, translucent variant used for the four result cards, kept over the dark rainbow page background */
+  .card-light{
+    background:rgba(255,255,255,.92);
+    border:1px solid rgba(44,42,58,.1);
+    box-shadow:0 10px 26px rgba(60,80,110,.18);
+    color:#2c2a3a;
+  }
+  .card-light h2{ color:#9a6a1e; }
+  .card-light .desc{ color:#6c6a78; }
+  .card-light .fortune-text{ color:#3a3846; }
+  .card-light .fortune-date{ color:#7a7886; }
+  .card-light .disclaimer{ color:#8a8794; border-top-color:rgba(0,0,0,.1); }
+  .card-light .saju-summary{ color:#e9e2cf; }
+  .card .desc{
+    font-size:12.5px;
+    color:var(--muted);
+    margin:0 0 18px;
+    line-height:1.5;
+  }
+  label{
+    display:block;
+    font-size:12px;
+    color:var(--muted);
+    margin:14px 0 6px;
+    letter-spacing:.2px;
+  }
+  label:first-of-type{margin-top:0;}
+  input[type=text], input[type=password], input[type=tel], select{
+    width:100%;
+    background:#151928;
+    border:1px solid #363c56;
+    border-radius:10px;
+    padding:12px 13px;
+    color:var(--cream);
+    font-size:14.5px;
+    font-family:inherit;
+    outline:none;
+    transition:border-color .15s;
+  }
+  input:focus, select:focus{
+    border-color:var(--gold);
+  }
+  select{
+    -webkit-appearance:none;appearance:none;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M0 0 L5 6 L10 0 Z' fill='%238d93a8'/></svg>");
+    background-repeat:no-repeat;
+    background-position:right 14px center;
+  }
+  .row3{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:8px;}
+  .hint{font-size:11px;color:var(--muted);margin-top:6px;line-height:1.5;}
+  .cal-toggle{
+    display:flex;
+    gap:8px;
+  }
+  .cal-toggle-btn{
+    flex:1;
+    background:#151928;
+    border:1px solid #363c56;
+    border-radius:10px;
+    padding:11px 0;
+    color:var(--muted);
+    font-family:inherit;
+    font-size:13.5px;
+    font-weight:500;
+    transition:all .15s;
+  }
+  .cal-toggle-btn.active{
+    background:linear-gradient(135deg,var(--gold-soft),var(--gold));
+    color:#211a08;
+    font-weight:700;
+    border-color:transparent;
+  }
+  .leap-row{
+    margin-top:12px;
+    background:#151928;
+    border:1px solid #363c56;
+    border-radius:10px;
+    padding:10px 12px;
+  }
+  .leap-check{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size:13px;
+    color:var(--cream);
+    cursor:pointer;
+  }
+  .leap-check input{width:16px;height:16px;accent-color:var(--gold);}
+  .err{font-size:11.5px;color:var(--danger);margin-top:6px;min-height:14px;}
+  button{
+    font-family:inherit;
+    cursor:pointer;
+    border:none;
+  }
+  .btn-primary{
+    width:100%;
+    margin-top:20px;
+    background:linear-gradient(135deg,var(--gold-soft),var(--gold));
+    color:#211a08;
+    font-weight:700;
+    font-size:14.5px;
+    padding:13px;
+    border-radius:11px;
+    letter-spacing:.3px;
+    box-shadow:0 6px 18px rgba(200,162,78,.25);
+  }
+  .btn-primary:active{transform:translateY(1px);}
+  .btn-ghost{
+    width:100%;
+    margin-top:10px;
+    background:transparent;
+    color:var(--muted);
+    font-size:13px;
+    padding:10px;
+    border:1px solid #363c56;
+    border-radius:11px;
+  }
+  .link-row{
+    text-align:center;
+    margin-top:16px;
+    font-size:12.5px;
+    color:#6c6a78;
+  }
+  .link-row a{color:#9a6a1e;text-decoration:none;cursor:pointer;font-weight:600;}
+
+  /* ===== Result screen: pillars ===== */
+  .pillars{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:10px;
+    margin:6px 0 20px;
+  }
+  .pillar{
+    background:linear-gradient(180deg,#232945,#181c2c);
+    border:1px solid var(--card-line);
+    border-radius:10px;
+    padding:14px 4px 12px;
+    text-align:center;
+  }
+  .pillar .label{
+    font-size:10.5px;
+    color:var(--muted);
+    letter-spacing:.5px;
+    margin-bottom:10px;
+  }
+  .pillar .glyphs{
+    writing-mode:vertical-rl;
+    font-family:'Noto Serif KR',serif;
+    font-weight:700;
+    font-size:20px;
+    color:var(--gold-soft);
+    letter-spacing:6px;
+    margin:0 auto;
+    height:64px;
+  }
+  .pillar .romanized{
+    margin-top:10px;
+    font-size:10.5px;
+    color:var(--muted);
+  }
+  .saju-summary{
+    font-size:13px;
+    line-height:1.75;
+    color:#d9d2c1;
+    background:#171b29;
+    border-left:3px solid var(--gold);
+    padding:14px 14px;
+    border-radius:8px;
+    margin-bottom:4px;
+  }
+  .disclaimer{
+    font-size:10.5px;
+    color:var(--muted);
+    line-height:1.6;
+    margin-top:14px;
+    padding-top:12px;
+    border-top:1px dashed #363c56;
+  }
+
+  /* lucky numbers */
+  .ball-grid{
+    display:flex;
+    flex-wrap:wrap;
+    gap:9px;
+    margin:4px 0 4px;
+  }
+  .ball{
+    width:38px;height:38px;
+    border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Noto Serif KR',serif;
+    font-weight:700;
+    font-size:14px;
+    background:radial-gradient(circle at 35% 30%, #2a3050, #171b29);
+    border:1.5px solid var(--gold);
+    color:var(--gold-soft);
+  }
+  /* combined lottery sets - shown together at a glance */
+  .combo-table{
+    display:flex;
+    flex-direction:column;
+    gap:9px;
+  }
+  .combo-row{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    background:rgba(23,27,41,.6);
+    border:1px solid rgba(255,255,255,.06);
+    border-radius:10px;
+    padding:9px 8px;
+  }
+  .combo-balls{
+    display:flex;
+    gap:4px;
+    flex-wrap:nowrap;
+    flex:1;
+    min-width:0;
+    justify-content:space-between;
+  }
+  .combo-balls .ball{width:32px;height:32px;font-size:12.5px;flex-shrink:0;}
+
+  /* today's fortune */
+  .fortune-tag{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    background:linear-gradient(135deg,var(--gold-soft),var(--gold));
+    color:#211a08;
+    font-family:'Noto Serif KR',serif;
+    font-weight:700;
+    font-size:12px;
+    padding:5px 12px;
+    border-radius:999px;
+    margin-bottom:12px;
+  }
+  .fortune-text{
+    font-size:13.5px;
+    line-height:1.75;
+    color:#ece6d6;
+  }
+  .fortune-items{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+  .fortune-item{
+    background:rgba(0,0,0,.035);
+    border:1px solid rgba(0,0,0,.06);
+    border-radius:10px;
+    padding:10px 12px;
+  }
+  .fortune-item-label{
+    font-family:'Noto Serif KR',serif;
+    font-weight:700;
+    font-size:12.5px;
+    color:#9a6a1e;
+    margin-bottom:4px;
+  }
+  .fortune-item-text{
+    font-size:13px;
+    line-height:1.65;
+    color:#3a3846;
+  }
+  .fortune-date{
+    font-size:11px;
+    color:var(--muted);
+    margin-top:12px;
+  }
+
+  .top-actions{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:18px;
+  }
+  .top-actions-btns{display:flex;gap:14px;align-items:center;}
+  .greet{font-size:13px;color:#6c6a78;}
+  .greet b{color:#2c2a3a;}
+  .logout{
+    background:none;color:#6c6a78;
+    font-size:12px;text-decoration:underline;
+    padding:4px;
+  }
+  .screen{animation:fade .35s ease;}
+
+  /* home hub */
+  .hub-lead{
+    font-family:'Noto Serif KR',serif;
+    font-size:15px;
+    color:#2c2a3a;
+    margin:0 0 14px;
+  }
+  .hub-grid{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+  .hub-card{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    text-align:left;
+    width:100%;
+    background:rgba(255,255,255,.92);
+    backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+    border:1px solid rgba(44,42,58,.1);
+    border-radius:16px;
+    padding:16px 18px;
+    box-shadow:0 10px 30px rgba(0,0,0,.22);
+  }
+  .hub-card:active{transform:scale(.98);}
+  .hub-icon{
+    width:52px;height:52px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-size:24px;flex-shrink:0;
+  }
+  .hub-icon-gold{background:linear-gradient(135deg,var(--gold-soft),var(--gold));}
+  .hub-icon-teal{background:linear-gradient(135deg,#7fd9c4,var(--teal));}
+  .hub-icon-vermilion{background:linear-gradient(135deg,#e88a6a,var(--vermilion));}
+  .hub-label{
+    font-family:'Noto Serif KR',serif;
+    font-weight:700;
+    font-size:16px;
+    color:#2c2a3a;
+  }
+  .hub-sub{
+    font-size:11.5px;
+    color:#6c6a78;
+    margin-top:2px;
+  }
+
+  /* photo capture */
+  .photo-frame{
+    width:100%;
+    aspect-ratio:1/1;
+    max-height:280px;
+    border-radius:14px;
+    border:1.5px dashed rgba(0,0,0,.18);
+    background:rgba(0,0,0,.04);
+    display:flex;align-items:center;justify-content:center;
+    overflow:hidden;
+    margin-bottom:14px;
+  }
+  .photo-frame img{width:100%;height:100%;object-fit:cover;}
+  .photo-placeholder{
+    text-align:center;
+    color:#8a8794;
+    font-size:13px;
+    line-height:2;
+  }
+  @keyframes fade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+  .hidden{display:none !important;}
+  .loading{
+    text-align:center;color:var(--muted);font-size:13px;padding:30px 0;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="brand">
+    <div class="seal">四柱</div>
+    <div>
+      <h1 class="title">사주행운</h1>
+      <p class="subtitle">명리(命理)로 찾는 오늘의 행운번호</p>
+    </div>
+  </div>
+  <div class="rule"></div>
+
+  <!-- SIGNUP -->
+  <div id="screen-signup" class="screen">
+    <div class="card">
+      <h2>회원가입</h2>
+      <p class="desc">이름과 전화번호, 비밀번호를 입력해 주세요. 전화번호가 아이디가 됩니다.</p>
+
+      <label for="su-name">이름</label>
+      <input type="text" id="su-name" placeholder="홍길동" maxlength="20">
+
+      <label for="su-phone">전화번호 (아이디)</label>
+      <input type="tel" id="su-phone" inputmode="numeric" placeholder="01012345678" maxlength="11" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+      <div class="hint">하이픈(-) 없이 숫자만 입력해 주세요. (예: 01012345678)</div>
+
+      <label for="su-pw">비밀번호</label>
+      <input type="password" id="su-pw" placeholder="영문·숫자·특수문자 포함 8자 이상">
+      <div class="hint">영문, 숫자, 특수문자를 모두 포함해 8자 이상으로 설정해 주세요.</div>
+
+      <label for="su-pw2">비밀번호 확인</label>
+      <input type="password" id="su-pw2" placeholder="비밀번호를 한 번 더 입력">
+
+      <div class="err" id="su-err"></div>
+      <button class="btn-primary" onclick="handleSignup()">가입하고 시작하기</button>
+    </div>
+    <div class="link-row">이미 계정이 있으신가요? <a onclick="showScreen('login')">로그인</a></div>
+  </div>
+
+  <!-- LOGIN -->
+  <div id="screen-login" class="screen hidden">
+    <div class="card">
+      <h2>로그인</h2>
+      <p class="desc">가입하신 전화번호와 비밀번호로 로그인하세요.</p>
+
+      <label for="li-phone">전화번호 (아이디)</label>
+      <input type="tel" id="li-phone" inputmode="numeric" placeholder="01012345678" maxlength="11" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+      <div class="hint">하이픈(-) 없이 숫자만 입력해 주세요.</div>
+
+      <label for="li-pw">비밀번호</label>
+      <input type="password" id="li-pw" placeholder="비밀번호">
+
+      <div class="err" id="li-err"></div>
+      <button class="btn-primary" onclick="handleLogin()">로그인</button>
+    </div>
+    <div class="link-row"><a onclick="showScreen('reset')">비밀번호를 잊으셨나요?</a></div>
+    <div class="link-row">처음이신가요? <a onclick="showScreen('signup')">회원가입</a></div>
+  </div>
+
+  <!-- PASSWORD RESET -->
+  <div id="screen-reset" class="screen hidden">
+    <div class="card">
+      <h2>비밀번호 재설정</h2>
+      <p class="desc">가입 시 입력하신 이름과 전화번호를 입력해 주세요. 확인되면 새 비밀번호를 설정할 수 있어요.</p>
+
+      <label for="rs-name">이름</label>
+      <input type="text" id="rs-name" placeholder="홍길동" maxlength="20">
+
+      <label for="rs-phone">전화번호 (아이디)</label>
+      <input type="tel" id="rs-phone" inputmode="numeric" placeholder="01012345678" maxlength="11" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+
+      <div id="rs-step2" class="hidden">
+        <label for="rs-pw">새 비밀번호</label>
+        <input type="password" id="rs-pw" placeholder="영문·숫자·특수문자 포함 8자 이상">
+        <div class="hint">영문, 숫자, 특수문자를 모두 포함해 8자 이상으로 설정해 주세요.</div>
+
+        <label for="rs-pw2">새 비밀번호 확인</label>
+        <input type="password" id="rs-pw2" placeholder="비밀번호를 한 번 더 입력">
+      </div>
+
+      <div class="err" id="rs-err"></div>
+      <button class="btn-primary" id="rs-verify-btn" onclick="handleResetVerify()">본인 확인하기</button>
+      <button class="btn-primary hidden" id="rs-save-btn" onclick="handleResetSave()">비밀번호 변경하기</button>
+    </div>
+    <div class="link-row"><a onclick="showScreen('login')">로그인으로 돌아가기</a></div>
+  </div>
+
+  <!-- HOME HUB -->
+  <div id="screen-home" class="screen hidden">
+    <div class="top-actions">
+      <div class="greet"><b id="home-name-slot"></b>님, 어서 오세요</div>
+      <button class="logout" onclick="logout()">로그아웃</button>
+    </div>
+    <p class="hub-lead">오늘은 무엇을 봐드릴까요?</p>
+
+    <div class="hub-grid">
+      <button class="hub-card" onclick="goToSaju()">
+        <div class="hub-icon hub-icon-gold">☀️</div>
+        <div class="hub-label">사주팔자</div>
+        <div class="hub-sub">생년월일시로 보는 사주와 행운번호</div>
+      </button>
+      <button class="hub-card" onclick="goToPalm()">
+        <div class="hub-icon hub-icon-teal">✋</div>
+        <div class="hub-label">손금 보기</div>
+        <div class="hub-sub">손바닥 사진으로 보는 AI 손금</div>
+      </button>
+      <button class="hub-card" onclick="goToFace()">
+        <div class="hub-icon hub-icon-vermilion">👁</div>
+        <div class="hub-label">관상 보기</div>
+        <div class="hub-sub">얼굴 사진으로 보는 AI 인상 총평</div>
+      </button>
+    </div>
+  </div>
+
+  <!-- BIRTH INPUT -->
+  <div id="screen-birth" class="screen hidden">
+    <div class="top-actions">
+      <div class="greet"><b id="birth-name-slot"></b>님</div>
+      <div class="top-actions-btns">
+        <button class="logout" onclick="showScreen('home')">홈</button>
+        <button class="logout" onclick="logout()">로그아웃</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>생년월일시 입력</h2>
+      <p class="desc">태어난 연월일시를 입력하면 사주팔자와 행운번호를 알려드려요. 시간을 모르면 '모름'을 선택하세요.</p>
+
+      <label>달력 기준</label>
+      <div class="cal-toggle">
+        <button type="button" id="cal-solar-btn" class="cal-toggle-btn active" onclick="setCalendarType('solar')">양력</button>
+        <button type="button" id="cal-lunar-btn" class="cal-toggle-btn" onclick="setCalendarType('lunar')">음력</button>
+      </div>
+      <div class="hint">실제 태어난 날짜가 양력인지 음력인지 선택해 주세요. 음력을 선택하면 자동으로 양력으로 변환해 사주를 계산합니다.</div>
+
+      <label>생년월일</label>
+      <div class="row3">
+        <select id="b-year"></select>
+        <select id="b-month"></select>
+        <select id="b-day"></select>
+      </div>
+
+      <div id="leap-month-wrap" class="leap-row hidden">
+        <label class="leap-check">
+          <input type="checkbox" id="b-leap">
+          <span>윤달(閏月)입니다</span>
+        </label>
+        <div class="hint" id="leap-hint"></div>
+      </div>
+
+      <label for="b-hour">태어난 시각</label>
+      <select id="b-hour"></select>
+
+      <div class="err" id="b-err"></div>
+      <button class="btn-primary" onclick="handleBirthSubmit()">사주 풀이 보기</button>
+    </div>
+  </div>
+
+  <!-- RESULT -->
+  <div id="screen-result" class="screen hidden">
+    <div class="top-actions">
+      <div class="greet"><b id="result-name-slot"></b>님의 사주</div>
+      <div class="top-actions-btns">
+        <button class="logout" onclick="showScreen('home')">홈</button>
+        <button class="logout" onclick="logout()">로그아웃</button>
+      </div>
+    </div>
+
+    <div class="card card-light">
+      <h2>사주팔자 (四柱八字)</h2>
+      <p class="desc" id="result-birth-desc"></p>
+
+      <div class="pillars" id="pillars-wrap"></div>
+      <div class="saju-summary" id="saju-summary"></div>
+    </div>
+
+    <div class="card card-light">
+      <h2>오늘의 사주 운세</h2>
+      <div id="fortune-tag-wrap"></div>
+      <div class="fortune-items" id="fortune-items"></div>
+      <div class="fortune-date" id="fortune-date"></div>
+    </div>
+
+    <div class="card card-light">
+      <h2>행운의 숫자 10</h2>
+      <p class="desc">사주 여덟 글자의 기운으로 뽑은 오늘의 행운 숫자예요.</p>
+      <div class="ball-grid" id="lucky10-wrap"></div>
+    </div>
+
+    <div class="card card-light">
+      <h2>추천 조합 5세트</h2>
+      <p class="desc">행운의 숫자 10개 중 6개씩 조합한 다섯 세트를 한눈에 볼 수 있어요.</p>
+      <div class="combo-table" id="sets-wrap"></div>
+      <div class="disclaimer">
+        본 결과는 전통 명리학 이론을 간단화하여 재미로 제공하는 콘텐츠입니다. 실제 만세력과 다를 수 있으며, 어떠한 결과도 보장하지 않습니다.
+      </div>
+    </div>
+
+    <button class="btn-ghost" onclick="showScreen('birth')">생년월일시 다시 입력</button>
+    <button class="btn-ghost" onclick="showScreen('home')">홈으로</button>
+  </div>
+
+  <!-- PALM READING -->
+  <div id="screen-palm" class="screen hidden">
+    <div class="top-actions">
+      <div class="greet"><b id="palm-name-slot"></b>님의 손금</div>
+      <div class="top-actions-btns">
+        <button class="logout" onclick="showScreen('home')">홈</button>
+        <button class="logout" onclick="logout()">로그아웃</button>
+      </div>
+    </div>
+
+    <div class="card card-light">
+      <h2>손금 촬영</h2>
+      <p class="desc">손바닥을 펴고 화면 가득 나오도록 밝은 곳에서 촬영해 주세요. 촬영한 사진은 AI 분석에만 사용되며 서버에 저장되지 않습니다.</p>
+
+      <div class="photo-frame" id="palm-photo-frame">
+        <span class="photo-placeholder">✋<br>사진 없음</span>
+      </div>
+      <input type="file" id="palm-file-input" accept="image/*" capture="environment" class="hidden" onchange="onPhotoSelected('palm')">
+      <button class="btn-primary" onclick="document.getElementById('palm-file-input').click()">사진 촬영 / 선택</button>
+      <button class="btn-primary" id="palm-analyze-btn" style="display:none" onclick="analyzePhoto('palm')">AI 손금 분석하기</button>
+      <div class="err" id="palm-err"></div>
+    </div>
+
+    <div class="card card-light hidden" id="palm-result-card">
+      <h2>AI 손금 풀이</h2>
+      <p class="fortune-text" id="palm-result-text"></p>
+      <div class="disclaimer">본 결과는 전통 손금 풀이 스타일을 재미로 재구성한 AI 콘텐츠이며, 의학적·과학적 진단이 아닙니다.</div>
+    </div>
+  </div>
+
+  <!-- FACE READING -->
+  <div id="screen-face" class="screen hidden">
+    <div class="top-actions">
+      <div class="greet"><b id="face-name-slot"></b>님의 관상</div>
+      <div class="top-actions-btns">
+        <button class="logout" onclick="showScreen('home')">홈</button>
+        <button class="logout" onclick="logout()">로그아웃</button>
+      </div>
+    </div>
+
+    <div class="card card-light">
+      <h2>얼굴 촬영</h2>
+      <p class="desc">정면을 바라보고 얼굴 전체가 나오도록 밝은 곳에서 촬영해 주세요. 촬영한 사진은 AI 분석에만 사용되며 서버에 저장되지 않습니다.</p>
+
+      <div class="photo-frame" id="face-photo-frame">
+        <span class="photo-placeholder">👤<br>사진 없음</span>
+      </div>
+      <input type="file" id="face-file-input" accept="image/*" capture="user" class="hidden" onchange="onPhotoSelected('face')">
+      <button class="btn-primary" onclick="document.getElementById('face-file-input').click()">사진 촬영 / 선택</button>
+      <button class="btn-primary" id="face-analyze-btn" style="display:none" onclick="analyzePhoto('face')">AI 관상 분석하기</button>
+      <div class="err" id="face-err"></div>
+    </div>
+
+    <div class="card card-light hidden" id="face-result-card">
+      <h2>AI 관상 총평</h2>
+      <p class="fortune-text" id="face-result-text"></p>
+      <div class="disclaimer">본 결과는 전통 관상 풀이 스타일을 재미로 재구성한 AI 콘텐츠이며, 외모 평가나 의학적 진단이 아닙니다.</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ---------------- storage helpers (browser localStorage, works standalone) ---------------- */
+const LS_PREFIX = 'sajuapp_';
+async function saveUser(user){
+  try{
+    localStorage.setItem(LS_PREFIX+'user:'+user.phone, JSON.stringify(user));
+  }catch(e){ console.error('저장 실패', e); }
+}
+async function loadUser(phone){
+  try{
+    const v = localStorage.getItem(LS_PREFIX+'user:'+phone);
+    return v ? JSON.parse(v) : null;
+  }catch(e){ return null; }
+}
+async function setSession(phone){
+  try{
+    localStorage.setItem(LS_PREFIX+'session', JSON.stringify({phone}));
+  }catch(e){ console.error('세션 저장 실패', e); }
+}
+async function getSession(){
+  try{
+    const v = localStorage.getItem(LS_PREFIX+'session');
+    return v ? JSON.parse(v) : null;
+  }catch(e){ return null; }
+}
+async function clearSession(){
+  try{ localStorage.removeItem(LS_PREFIX+'session'); }catch(e){}
+}
+
+/* ---------------- validation ---------------- */
+function normalizePhone(v){
+  return (v||'').replace(/[^0-9]/g,'');
+}
+function isValidPhone(v){
+  const d = normalizePhone(v);
+  return d.length===10 || d.length===11;
+}
+function isValidPassword(v){
+  const hasLetter = /[A-Za-z]/.test(v);
+  const hasDigit = /[0-9]/.test(v);
+  const hasSpecial = /[^A-Za-z0-9]/.test(v);
+  return hasLetter && hasDigit && hasSpecial && v.length>=8;
+}
+
+/* ---------------- screens ---------------- */
+function showScreen(name){
+  ['signup','login','reset','home','birth','result','palm','face'].forEach(s=>{
+    document.getElementById('screen-'+s).classList.toggle('hidden', s!==name);
+  });
+  window.scrollTo(0,0);
+}
+
+/* ---------------- signup / login ---------------- */
+async function handleSignup(){
+ try{
+  const name = document.getElementById('su-name').value.trim();
+  const phoneRaw = document.getElementById('su-phone').value.trim();
+  const pw = document.getElementById('su-pw').value;
+  const pw2 = document.getElementById('su-pw2').value;
+  const errEl = document.getElementById('su-err');
+  errEl.textContent='';
+
+  if(!name){ errEl.textContent='이름을 입력해 주세요.'; return; }
+  if(!isValidPhone(phoneRaw)){ errEl.textContent='전화번호를 정확히 입력해 주세요. (10~11자리 숫자)'; return; }
+  if(!isValidPassword(pw)){ errEl.textContent='비밀번호는 영문, 숫자, 특수문자를 포함해 8자 이상이어야 합니다.'; return; }
+  if(pw!==pw2){ errEl.textContent='비밀번호가 일치하지 않습니다.'; return; }
+
+  const phone = normalizePhone(phoneRaw);
+  const existing = await loadUser(phone);
+  if(existing){ errEl.textContent='이미 가입된 전화번호입니다. 로그인해 주세요.'; return; }
+
+  const user = { name, phone, password: pw, birth:null, saju:null, lucky:null, sets:null };
+  await saveUser(user);
+  await setSession(phone);
+  currentUser = user;
+  await enterAfterAuth();
+ }catch(e){
+   console.error(e);
+   document.getElementById('su-err').textContent = '오류가 발생했습니다: ' + e.message;
+ }
+}
+
+async function handleLogin(){
+  const phoneRaw = document.getElementById('li-phone').value.trim();
+  const pw = document.getElementById('li-pw').value;
+  const errEl = document.getElementById('li-err');
+  errEl.textContent='';
+
+  if(!isValidPhone(phoneRaw)){ errEl.textContent='전화번호를 정확히 입력해 주세요.'; return; }
+  const phone = normalizePhone(phoneRaw);
+  const user = await loadUser(phone);
+  if(!user || user.password!==pw){ errEl.textContent='전화번호 또는 비밀번호가 올바르지 않습니다.'; return; }
+
+  await setSession(phone);
+  currentUser = user;
+  await enterAfterAuth();
+}
+
+async function logout(){
+  await clearSession();
+  currentUser = null;
+  document.getElementById('su-name').value='';
+  document.getElementById('su-phone').value='';
+  document.getElementById('su-pw').value='';
+  document.getElementById('su-pw2').value='';
+  document.getElementById('li-phone').value='';
+  document.getElementById('li-pw').value='';
+  resetPasswordResetScreen();
+  showScreen('login');
+}
+
+/* ---------------- password reset ---------------- */
+let resetVerifiedPhone = null;
+
+function resetPasswordResetScreen(){
+  resetVerifiedPhone = null;
+  document.getElementById('rs-name').value='';
+  document.getElementById('rs-phone').value='';
+  document.getElementById('rs-pw').value='';
+  document.getElementById('rs-pw2').value='';
+  document.getElementById('rs-err').textContent='';
+  document.getElementById('rs-step2').classList.add('hidden');
+  document.getElementById('rs-verify-btn').classList.remove('hidden');
+  document.getElementById('rs-save-btn').classList.add('hidden');
+  document.getElementById('rs-name').disabled = false;
+  document.getElementById('rs-phone').disabled = false;
+}
+
+async function handleResetVerify(){
+  const name = document.getElementById('rs-name').value.trim();
+  const phoneRaw = document.getElementById('rs-phone').value.trim();
+  const errEl = document.getElementById('rs-err');
+  errEl.textContent='';
+
+  if(!name){ errEl.textContent='이름을 입력해 주세요.'; return; }
+  if(!isValidPhone(phoneRaw)){ errEl.textContent='전화번호를 정확히 입력해 주세요.'; return; }
+
+  const phone = normalizePhone(phoneRaw);
+  const user = await loadUser(phone);
+  if(!user || user.name !== name){
+    errEl.textContent = '일치하는 회원 정보를 찾을 수 없습니다. 이름과 전화번호를 다시 확인해 주세요.';
+    return;
+  }
+
+  resetVerifiedPhone = phone;
+  document.getElementById('rs-name').disabled = true;
+  document.getElementById('rs-phone').disabled = true;
+  document.getElementById('rs-step2').classList.remove('hidden');
+  document.getElementById('rs-verify-btn').classList.add('hidden');
+  document.getElementById('rs-save-btn').classList.remove('hidden');
+}
+
+async function handleResetSave(){
+  const errEl = document.getElementById('rs-err');
+  errEl.textContent='';
+  if(!resetVerifiedPhone){ errEl.textContent='본인 확인을 먼저 진행해 주세요.'; return; }
+
+  const pw = document.getElementById('rs-pw').value;
+  const pw2 = document.getElementById('rs-pw2').value;
+  if(!isValidPassword(pw)){ errEl.textContent='비밀번호는 영문, 숫자, 특수문자를 포함해 8자 이상이어야 합니다.'; return; }
+  if(pw!==pw2){ errEl.textContent='비밀번호가 일치하지 않습니다.'; return; }
+
+  const user = await loadUser(resetVerifiedPhone);
+  if(!user){ errEl.textContent='회원 정보를 찾을 수 없습니다.'; return; }
+
+  user.password = pw;
+  await saveUser(user);
+
+  resetPasswordResetScreen();
+  showScreen('login');
+  document.getElementById('li-err').textContent = '비밀번호가 변경되었습니다. 새 비밀번호로 로그인해 주세요.';
+}
+
+async function enterAfterAuth(){
+  document.getElementById('home-name-slot').textContent = currentUser.name;
+  document.getElementById('birth-name-slot').textContent = currentUser.name;
+  document.getElementById('result-name-slot').textContent = currentUser.name;
+  document.getElementById('palm-name-slot').textContent = currentUser.name;
+  document.getElementById('face-name-slot').textContent = currentUser.name;
+  showScreen('home');
+}
+
+function goToSaju(){
+  if(currentUser.birth && currentUser.saju && currentUser.lucky && currentUser.sets){
+    renderResult();
+    showScreen('result');
+  } else {
+    showScreen('birth');
+  }
+}
+function goToPalm(){ resetPhotoScreen('palm'); showScreen('palm'); }
+function goToFace(){ resetPhotoScreen('face'); showScreen('face'); }
+
+/* ---------------- birth selects ---------------- */
+let calendarType = 'solar'; // 'solar' | 'lunar'
+
+function setCalendarType(type){
+  calendarType = type;
+  document.getElementById('cal-solar-btn').classList.toggle('active', type==='solar');
+  document.getElementById('cal-lunar-btn').classList.toggle('active', type==='lunar');
+  document.getElementById('leap-month-wrap').classList.toggle('hidden', type!=='lunar');
+  document.getElementById('b-leap').checked = false;
+  refreshDaysGlobal();
+  refreshLeapHint();
+}
+
+function refreshLeapHint(){
+  const hintEl = document.getElementById('leap-hint');
+  if(calendarType!=='lunar'){ hintEl.textContent=''; return; }
+  const y = parseInt(document.getElementById('b-year').value);
+  if(!y || y<1900 || y>2100){ hintEl.textContent=''; return; }
+  const lm = leapMonthOf(y);
+  hintEl.textContent = lm>0
+    ? `${y}년(음력)에는 윤${lm}월이 있습니다. 윤달에 태어나셨다면 체크해 주세요.`
+    : `${y}년(음력)에는 윤달이 없습니다.`;
+}
+
+let refreshDaysGlobal = function(){};
+
+function fillBirthSelects(){
+  const yearSel = document.getElementById('b-year');
+  const monthSel = document.getElementById('b-month');
+  const daySel = document.getElementById('b-day');
+  const hourSel = document.getElementById('b-hour');
+  const leapChk = document.getElementById('b-leap');
+
+  const nowYear = new Date().getFullYear();
+  let yOpts = '';
+  for(let y=nowYear; y>=Math.max(1900,nowYear-100); y--){ yOpts += `<option value="${y}">${y}년</option>`; }
+  yearSel.innerHTML = yOpts;
+
+  let mOpts='';
+  for(let m=1;m<=12;m++){ mOpts += `<option value="${m}">${m}월</option>`; }
+  monthSel.innerHTML = mOpts;
+
+  function refreshDays(){
+    const y = parseInt(yearSel.value), m = parseInt(monthSel.value);
+    let days;
+    if(calendarType==='lunar'){
+      const isLeapChecked = leapChk.checked && leapMonthOf(y)===m;
+      days = isLeapChecked ? leapDaysOf(y) : monthDaysOf(y,m);
+      if(!days || days<0) days = 29;
+    } else {
+      days = new Date(y, m, 0).getDate();
+    }
+    let dOpts='';
+    for(let d=1; d<=days; d++){ dOpts += `<option value="${d}">${d}일</option>`; }
+    const prev = daySel.value;
+    daySel.innerHTML = dOpts;
+    if(prev && parseInt(prev)<=days) daySel.value = prev;
+    refreshLeapHint();
+  }
+  refreshDaysGlobal = refreshDays;
+  yearSel.onchange = refreshDays;
+  monthSel.onchange = refreshDays;
+  leapChk.onchange = refreshDays;
+  refreshDays();
+
+  const hourLabels = [
+    ['0','자시 (23:00~01:00)'],['1','축시 (01:00~03:00)'],['2','인시 (03:00~05:00)'],
+    ['3','묘시 (05:00~07:00)'],['4','진시 (07:00~09:00)'],['5','사시 (09:00~11:00)'],
+    ['6','오시 (11:00~13:00)'],['7','미시 (13:00~15:00)'],['8','신시 (15:00~17:00)'],
+    ['9','유시 (17:00~19:00)'],['10','술시 (19:00~21:00)'],['11','해시 (21:00~23:00)']
+  ];
+  let hOpts = '<option value="unknown">태어난 시각 모름</option>';
+  hourLabels.forEach(([v,l])=>{ hOpts += `<option value="${v}">${l}</option>`; });
+  hourSel.innerHTML = hOpts;
+}
+
+/* ---------------- lunar(음력) <-> solar(양력) conversion, 1900-2100 ---------------- */
+/* Table source: KASI-derived lunar big/small-month + leap-month data, widely used
+   1900-2100 reference implementation (jjonline/calendar.js, MIT). Used here only for
+   converting a lunar birth date to its solar equivalent. */
+const LUNAR_INFO = [
+0x04bd8,0x04ae0,0x0a570,0x054d5,0x0d260,0x0d950,0x16554,0x056a0,0x09ad0,0x055d2,
+0x04ae0,0x0a5b6,0x0a4d0,0x0d250,0x1d255,0x0b540,0x0d6a0,0x0ada2,0x095b0,0x14977,
+0x04970,0x0a4b0,0x0b4b5,0x06a50,0x06d40,0x1ab54,0x02b60,0x09570,0x052f2,0x04970,
+0x06566,0x0d4a0,0x0ea50,0x06e95,0x05ad0,0x02b60,0x186e3,0x092e0,0x1c8d7,0x0c950,
+0x0d4a0,0x1d8a6,0x0b550,0x056a0,0x1a5b4,0x025d0,0x092d0,0x0d2b2,0x0a950,0x0b557,
+0x06ca0,0x0b550,0x15355,0x04da0,0x0a5b0,0x14573,0x052b0,0x0a9a8,0x0e950,0x06aa0,
+0x0aea6,0x0ab50,0x04b60,0x0aae4,0x0a570,0x05260,0x0f263,0x0d950,0x05b57,0x056a0,
+0x096d0,0x04dd5,0x04ad0,0x0a4d0,0x0d4d4,0x0d250,0x0d558,0x0b540,0x0b6a0,0x195a6,
+0x095b0,0x049b0,0x0a974,0x0a4b0,0x0b27a,0x06a50,0x06d40,0x0af46,0x0ab60,0x09570,
+0x04af5,0x04970,0x064b0,0x074a3,0x0ea50,0x06b58,0x055c0,0x0ab60,0x096d5,0x092e0,
+0x0c960,0x0d954,0x0d4a0,0x0da50,0x07552,0x056a0,0x0abb7,0x025d0,0x092d0,0x0cab5,
+0x0a950,0x0b4a0,0x0baa4,0x0ad50,0x055d9,0x04ba0,0x0a5b0,0x15176,0x052b0,0x0a930,
+0x07954,0x06aa0,0x0ad50,0x05b52,0x04b60,0x0a6e6,0x0a4e0,0x0d260,0x0ea65,0x0d530,
+0x05aa0,0x076a3,0x096d0,0x04afb,0x04ad0,0x0a4d0,0x1d0b6,0x0d250,0x0d520,0x0dd45,
+0x0b5a0,0x056d0,0x055b2,0x049b0,0x0a577,0x0a4b0,0x0aa50,0x1b255,0x06d20,0x0ada0,
+0x14b63,0x09370,0x049f8,0x04970,0x064b0,0x168a6,0x0ea50,0x06b20,0x1a6c4,0x0aae0,
+0x0a2e0,0x0d2e3,0x0c960,0x0d557,0x0d4a0,0x0da50,0x05d55,0x056a0,0x0a6d0,0x055d4,
+0x052d0,0x0a9b8,0x0a950,0x0b4a0,0x0b6a6,0x0ad50,0x055a0,0x0aba4,0x0a5b0,0x052b0,
+0x0b273,0x06930,0x07337,0x06aa0,0x0ad50,0x14b55,0x04b60,0x0a570,0x054e4,0x0d160,
+0x0e968,0x0d520,0x0daa0,0x16aa6,0x056d0,0x04ae0,0x0a9d4,0x0a2d0,0x0d150,0x0f252,
+0x0d520
+];
+
+function leapMonthOf(y){ return LUNAR_INFO[y-1900] & 0xf; }
+function leapDaysOf(y){ return leapMonthOf(y) ? ((LUNAR_INFO[y-1900] & 0x10000) ? 30 : 29) : 0; }
+function monthDaysOf(y,m){
+  if(m>12||m<1) return -1;
+  return (LUNAR_INFO[y-1900] & (0x10000>>m)) ? 30 : 29;
+}
+function lYearDaysOf(y){
+  let sum = 348;
+  for(let i=0x8000; i>0x8; i>>=1){ sum += (LUNAR_INFO[y-1900] & i) ? 1 : 0; }
+  return sum + leapDaysOf(y);
+}
+
+// Converts a lunar (음력) date to its solar (양력) equivalent. Returns {y,m,d} or null if invalid.
+function lunarToSolar(y, m, d, isLeapMonth){
+  if(y<1900 || y>2100) return null;
+  const lm = leapMonthOf(y);
+  if(isLeapMonth && lm!==m) return null;
+  const dayCount = isLeapMonth ? leapDaysOf(y) : monthDaysOf(y,m);
+  if(d<1 || d>dayCount) return null;
+
+  let offset = 0;
+  for(let i=1900;i<y;i++){ offset += lYearDaysOf(i); }
+  let isAdd = false;
+  for(let i=1;i<m;i++){
+    const leap = leapMonthOf(y);
+    if(!isAdd){
+      if(leap<=i && leap>0){ offset += leapDaysOf(y); isAdd = true; }
+    }
+    offset += monthDaysOf(y,i);
+  }
+  if(isLeapMonth){ offset += monthDaysOf(y,m); }
+
+  const stmap = Date.UTC(1900,1,30,0,0,0); // reference epoch used by the source table
+  const calObj = new Date((offset + d - 31) * 86400000 + stmap);
+  return { y: calObj.getUTCFullYear(), m: calObj.getUTCMonth()+1, d: calObj.getUTCDate() };
+}
+
+/* ---------------- saju calculation (simplified, for entertainment) ---------------- */
+const STEMS = ['갑','을','병','정','무','기','경','신','임','계'];
+const STEMS_HANJA = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+const BRANCHES = ['자','축','인','묘','진','사','오','미','신','유','술','해'];
+const BRANCHES_HANJA = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+
+function pillarFromIdx(stemIdx, branchIdx){
+  const s = ((stemIdx%10)+10)%10, b=((branchIdx%12)+12)%12;
+  return {
+    stemIdx:s, branchIdx:b,
+    stem:STEMS[s], branch:BRANCHES[b],
+    stemHanja:STEMS_HANJA[s], branchHanja:BRANCHES_HANJA[b]
+  };
+}
+
+function getYearPillar(year){
+  return pillarFromIdx(year-4, year-4);
+}
+
+function getMonthPillar(year, month, yearStemIdx){
+  const monthBranchIdx = (month+1)%12; // approx: Jan->축(1) ... Feb->인(2)
+  const monthStemIdx = ((yearStemIdx%5)*2 + month + 1) % 10; // simplified 오호둔월법 approximation
+  return pillarFromIdx(monthStemIdx, monthBranchIdx);
+}
+
+function getDayPillar(y,m,d){
+  // Reference-anchored 60갑자 (sexagenary cycle) day count; offset=0 corresponds to 갑자일.
+  const dayCyclical = Date.UTC(y, m-1, 1, 0,0,0,0) / 86400000 + 25567 + 10;
+  const idx = Math.round(dayCyclical) + d - 1;
+  return pillarFromIdx(idx, idx);
+}
+
+function getHourPillar(dayStemIdx, hourBranchIdx){
+  if(hourBranchIdx===null) return null;
+  const hourStemIdx = ((dayStemIdx%5)*2 + hourBranchIdx) % 10; // 오자시법 approximation
+  return pillarFromIdx(hourStemIdx, hourBranchIdx);
+}
+
+function computeSaju(y,m,d,hourVal){
+  const yearP = getYearPillar(y);
+  const monthP = getMonthPillar(y,m,yearP.stemIdx);
+  const dayP = getDayPillar(y,m,d);
+  const hourBranchIdx = hourVal==='unknown' ? null : parseInt(hourVal);
+  const hourP = getHourPillar(dayP.stemIdx, hourBranchIdx);
+  return {year:yearP, month:monthP, day:dayP, hour:hourP};
+}
+
+/* ---------------- seeded random for lucky numbers ---------------- */
+function hashSeed(str){
+  let h = 2166136261;
+  for(let i=0;i<str.length;i++){
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h>>>0;
+}
+function mulberry32(a){
+  return function(){
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a>>>15), 1 | a);
+    t = (t + Math.imul(t ^ (t>>>7), 61 | t)) ^ t;
+    return ((t ^ (t>>>14))>>>0) / 4294967296;
+  };
+}
+
+function generateLucky(seedStr){
+  const rand = mulberry32(hashSeed(seedStr));
+  const pool = Array.from({length:45}, (_,i)=>i+1);
+  // Fisher-Yates shuffle
+  for(let i=pool.length-1;i>0;i--){
+    const j = Math.floor(rand()*(i+1));
+    [pool[i],pool[j]] = [pool[j],pool[i]];
+  }
+  const lucky10 = pool.slice(0,10).sort((a,b)=>a-b);
+
+  const sets = [];
+  const seen = new Set();
+  let tries=0;
+  while(sets.length<5 && tries<200){
+    tries++;
+    const idxPool = [0,1,2,3,4,5,6,7,8,9];
+    for(let i=idxPool.length-1;i>0;i--){
+      const j = Math.floor(rand()*(i+1));
+      [idxPool[i],idxPool[j]]=[idxPool[j],idxPool[i]];
+    }
+    const chosen = idxPool.slice(0,6).map(i=>lucky10[i]).sort((a,b)=>a-b);
+    const key = chosen.join(',');
+    if(!seen.has(key)){
+      seen.add(key);
+      sets.push(chosen);
+    }
+  }
+  return {lucky10, sets};
+}
+
+/* ---------------- today's fortune (오늘의 사주 운세) ---------------- */
+const STEM_ELEMENT = {
+  '갑':'목','을':'목','병':'화','정':'화','무':'토','기':'토','경':'금','신':'금','임':'수','계':'수'
+};
+const ELEMENT_LABEL = { '목':'목(木)', '화':'화(火)', '토':'토(土)', '금':'금(金)', '수':'수(水)' };
+
+const FORTUNE_CATEGORY_LABEL = { work:'사업·일운', money:'금전운', love:'연애운', health:'건강운' };
+const FORTUNE_CATEGORY_ICON = { work:'💼', money:'💰', love:'💕', health:'🌿' };
+
+const FORTUNE_TEXTS = {
+  '목': {
+    work: [
+      '새로운 프로젝트나 제안을 시작하기 좋은 흐름이에요. 미뤄뒀던 일을 다시 꺼내보면 반응이 좋을 수 있어요.',
+      '확장과 성장의 기운이 강해, 업무 범위를 넓히거나 새로운 사람과 협업을 시도하기에 유리합니다.',
+      '계획을 구체화하는 단계에 있다면 오늘 한 걸음 내딛어보세요. 시작이 좋은 결과를 만듭니다.'
+    ],
+    money: [
+      '무리한 투자보다는 성장 가능성 있는 곳에 소액으로 접근하는 편이 안전해요.',
+      '돈이 들어오고 나가는 흐름이 활발해질 수 있으니, 지출 계획을 세워두면 도움이 됩니다.',
+      '장기적인 재테크 정보를 알아보기 좋은 날이에요. 당장의 수익보다 방향을 잡는 데 집중하세요.'
+    ],
+    love: [
+      '관계를 한 단계 발전시키고 싶다면 먼저 다가가는 쪽이 유리해요.',
+      '새로운 인연이 자연스럽게 다가올 수 있는 흐름입니다. 마음을 열어두세요.',
+      '표현하지 못했던 마음을 전하기 좋은 타이밍이에요.'
+    ],
+    health: [
+      '활동량을 늘리기 좋은 날이라 가볍게 몸을 움직이면 컨디션이 살아나요.',
+      '무리한 일정보다는 스트레칭이나 산책처럼 몸을 풀어주는 활동이 도움이 됩니다.',
+      '새로운 운동을 시작하기에도 나쁘지 않은 흐름이에요.'
+    ]
+  },
+  '화': {
+    work: [
+      '발표나 미팅처럼 사람들 앞에 나서는 자리에서 특히 좋은 인상을 남길 수 있어요.',
+      '열정이 앞서는 만큼, 감정적인 결정보다는 오후 늦게 판단하는 편이 안전합니다.',
+      '적극적으로 의견을 내면 예상보다 좋은 반응을 얻을 수 있는 날이에요.'
+    ],
+    money: [
+      '즉흥적인 소비가 늘어날 수 있으니 큰 지출은 한 번 더 생각해보세요.',
+      '예상치 못한 수입이나 좋은 제안이 들어올 가능성이 있는 날입니다.',
+      '돈보다 사람과의 관계에 투자하면 나중에 더 큰 도움으로 돌아올 수 있어요.'
+    ],
+    love: [
+      '매력과 표현력이 살아나는 날이라 고백이나 데이트 신청에 유리해요.',
+      '감정 표현이 풍부해지는 만큼, 오해가 없도록 말을 신중히 고르는 것도 필요해요.',
+      '함께 있는 사람에게 유독 끌리는 하루가 될 수 있어요.'
+    ],
+    health: [
+      '에너지가 넘치지만 쉽게 지칠 수 있으니 중간중간 휴식을 챙기세요.',
+      '컨디션 변화에 조금 예민해질 수 있는 날이니 무리하지 마세요.',
+      '땀을 흘리는 활동이 스트레스 해소에 특히 좋은 하루예요.'
+    ]
+  },
+  '토': {
+    work: [
+      '큰 변화보다는 지금까지 해온 일을 정리하고 다지는 데 유리한 날이에요.',
+      '신뢰를 바탕으로 한 협업이나 계약이 순조롭게 진행될 수 있습니다.',
+      '묵묵히 쌓아온 노력이 서서히 인정받기 시작하는 시기예요.'
+    ],
+    money: [
+      '계획적인 소비가 만족감을 주는 날이에요. 예산을 세워두고 움직여보세요.',
+      '저축이나 안정적인 자산 관리에 관심을 가지면 좋은 결과로 이어질 수 있어요.',
+      '작은 재물운이 따르지만, 무리한 확장보다는 지키는 쪽에 무게를 두세요.'
+    ],
+    love: [
+      '편안하고 안정적인 만남이 마음을 채워주는 하루예요.',
+      '오래된 인연일수록 오늘 나눈 대화가 더 깊은 신뢰로 이어질 수 있어요.',
+      '서두르지 않아도 관계가 자연스럽게 무르익는 흐름입니다.'
+    ],
+    health: [
+      '규칙적인 생활 패턴이 컨디션을 지켜주는 하루예요.',
+      '소화기 쪽에 신경 쓰이는 날일 수 있으니 과식은 피하는 게 좋아요.',
+      '몸을 따뜻하게 유지하는 것만으로도 컨디션이 한결 나아질 거예요.'
+    ]
+  },
+  '금': {
+    work: [
+      '판단력과 결단력이 날카로워지는 날이라 미뤄왔던 결정을 내리기 좋아요.',
+      '계약, 협상, 시험처럼 정확함이 필요한 일에 유리한 흐름입니다.',
+      '원칙을 지키는 태도가 신뢰를 얻는 데 큰 힘이 되는 하루예요.'
+    ],
+    money: [
+      '지출과 수입을 정리해보면 생각보다 여유가 있다는 걸 확인하게 될 수 있어요.',
+      '불필요한 항목을 정리하는 것만으로도 재정에 여유가 생기는 날입니다.',
+      '정확한 계산이 필요한 금전 문제는 오늘 처리해두는 게 유리해요.'
+    ],
+    love: [
+      '분명한 마음을 전하는 것이 관계에 좋은 영향을 주는 하루예요.',
+      '우유부단했던 문제를 오늘은 확실히 정리할 수 있는 기운이 있어요.',
+      '예의와 배려가 상대에게 좋은 인상으로 남는 날입니다.'
+    ],
+    health: [
+      '긴장된 근육이나 관절 쪽을 가볍게 풀어주면 컨디션 관리에 도움이 돼요.',
+      '호흡기 건강에 신경 쓰면 좋은 날이니 환기를 자주 시켜주세요.',
+      '숙면이 컨디션 회복의 열쇠가 되는 하루입니다.'
+    ]
+  },
+  '수': {
+    work: [
+      '막혔던 문제도 다른 각도에서 보면 의외로 쉽게 풀릴 수 있는 날이에요.',
+      '유연한 대응이 예상치 못한 좋은 기회로 이어질 수 있습니다.',
+      '아이디어가 잘 떠오르는 흐름이라 기획이나 아이디어 회의에 유리해요.'
+    ],
+    money: [
+      '자금의 흐름이 유동적인 날이라 계획을 세워두는 것이 도움이 됩니다.',
+      '직감을 믿고 움직인 선택이 나쁘지 않은 결과로 이어질 수 있어요.',
+      '여윳돈을 어디에 쓸지 고민된다면 조금 시간을 두고 결정하세요.'
+    ],
+    love: [
+      '감정이 섬세해지는 하루라 깊은 대화를 나누기에 좋은 타이밍이에요.',
+      '직감이 유난히 잘 맞는 날이니 마음이 가는 대로 움직여도 좋아요.',
+      '상대의 마음을 세심하게 살피면 관계가 한층 더 가까워질 수 있어요.'
+    ],
+    health: [
+      '몸이 붓거나 피로가 쌓이기 쉬운 날이니 수분 섭취를 충분히 하세요.',
+      '충분한 휴식이 컨디션을 지켜주는 하루예요.',
+      '차가운 음식보다는 따뜻한 음식이 몸에 더 잘 맞는 날입니다.'
+    ]
+  }
+};
+
+function getTodaysFortune(user){
+  const dayStem = user.saju.day.stem;
+  const element = STEM_ELEMENT[dayStem] || '토';
+  const now = new Date();
+  const todayKey = `${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()}`;
+  const categories = ['work','money','love','health'];
+  const items = categories.map(cat=>{
+    const seed = hashSeed(`${user.phone}-${dayStem}-${todayKey}-${cat}`);
+    const rand = mulberry32(seed);
+    const arr = FORTUNE_TEXTS[element][cat];
+    const text = arr[Math.floor(rand()*arr.length)];
+    return { category: cat, label: FORTUNE_CATEGORY_LABEL[cat], icon: FORTUNE_CATEGORY_ICON[cat], text };
+  });
+  const dateLabel = `${now.getFullYear()}년 ${now.getMonth()+1}월 ${now.getDate()}일 기준 · 오늘의 기운 '${element}(${dayStem})'`;
+  return { element, items, dateLabel };
+}
+async function handleBirthSubmit(){
+  const y = parseInt(document.getElementById('b-year').value);
+  const m = parseInt(document.getElementById('b-month').value);
+  const d = parseInt(document.getElementById('b-day').value);
+  const hourVal = document.getElementById('b-hour').value;
+  const isLeap = document.getElementById('b-leap').checked;
+  const errEl = document.getElementById('b-err');
+  errEl.textContent='';
+
+  if(!y||!m||!d){ errEl.textContent='생년월일을 선택해 주세요.'; return; }
+
+  let solar = {y,m,d};
+  if(calendarType==='lunar'){
+    const converted = lunarToSolar(y,m,d,isLeap);
+    if(!converted){
+      errEl.textContent = '입력하신 음력 날짜가 올바르지 않습니다. 연도(1900~2100)와 윤달 여부를 확인해 주세요.';
+      return;
+    }
+    solar = converted;
+  }
+
+  const saju = computeSaju(solar.y, solar.m, solar.d, hourVal);
+  const seedStr = `${solar.y}-${solar.m}-${solar.d}-${hourVal}-${saju.year.stem}${saju.year.branch}-${saju.day.stem}${saju.day.branch}`;
+  const {lucky10, sets} = generateLucky(seedStr);
+
+  currentUser.birth = {
+    calendarType, isLeap,
+    inputY:y, inputM:m, inputD:d,
+    y:solar.y, m:solar.m, d:solar.d,
+    hourVal
+  };
+  currentUser.saju = saju;
+  currentUser.lucky = lucky10;
+  currentUser.sets = sets;
+  await saveUser(currentUser);
+
+  renderResult();
+  showScreen('result');
+}
+
+/* ---------------- render result ---------------- */
+function renderResult(){
+  const birth = currentUser.birth;
+  const {y,m,d,hourVal} = birth;
+  const hourText = hourVal==='unknown' ? '시간 미상' :
+    ['자시','축시','인시','묘시','진시','사시','오시','미시','신시','유시','술시','해시'][parseInt(hourVal)];
+
+  let birthDesc;
+  if(birth.calendarType==='lunar'){
+    const leapTag = birth.isLeap ? '(윤달) ' : '';
+    birthDesc = `음력 ${birth.inputY}년 ${leapTag}${birth.inputM}월 ${birth.inputD}일 · ${hourText} 생 (양력 ${y}년 ${m}월 ${d}일 기준으로 계산)`;
+  } else {
+    birthDesc = `양력 ${y}년 ${m}월 ${d}일 · ${hourText} 생`;
+  }
+  document.getElementById('result-birth-desc').textContent = birthDesc;
+
+  const saju = currentUser.saju;
+  const pillarsWrap = document.getElementById('pillars-wrap');
+  const order = [
+    ['태어난 해', '년주', saju.year],
+    ['태어난 달', '월주', saju.month],
+    ['태어난 날', '일주', saju.day],
+    ['태어난 시', '시주', saju.hour],
+  ];
+  pillarsWrap.innerHTML = order.map(([sub,label,p])=>{
+    if(!p){
+      return `<div class="pillar"><div class="label">${sub}</div><div class="glyphs" style="color:var(--muted);font-size:14px;">미상</div></div>`;
+    }
+    return `<div class="pillar">
+      <div class="label">${sub}</div>
+      <div class="glyphs">${p.stemHanja}${p.branchHanja}</div>
+      <div class="romanized">${p.stem}${p.branch} (${label})</div>
+    </div>`;
+  }).join('');
+
+  const dayStem = saju.day.stem;
+  document.getElementById('saju-summary').textContent =
+    `당신을 대표하는 글자는 '${dayStem}'이에요. 여기에 태어난 해의 기운 '${saju.year.stem}${saju.year.branch}', 태어난 달의 기운 '${saju.month.stem}${saju.month.branch}'` +
+    (saju.hour ? `, 태어난 시의 기운 '${saju.hour.stem}${saju.hour.branch}'` : '') +
+    `가 더해져 총 네 가지 기운이 당신만의 사주를 이루고, 오늘의 행운 기운도 여기서 만들어져요.`;
+
+  const luckyWrap = document.getElementById('lucky10-wrap');
+  luckyWrap.innerHTML = currentUser.lucky.map(n=>`<div class="ball">${n}</div>`).join('');
+
+  const fortune = getTodaysFortune(currentUser);
+  document.getElementById('fortune-tag-wrap').innerHTML =
+    `<span class="fortune-tag">오늘의 기운 · ${ELEMENT_LABEL[fortune.element]}</span>`;
+  document.getElementById('fortune-items').innerHTML = fortune.items.map(item=>`
+    <div class="fortune-item">
+      <div class="fortune-item-label">${item.icon} ${item.label}</div>
+      <div class="fortune-item-text">${item.text}</div>
+    </div>
+  `).join('');
+  document.getElementById('fortune-date').textContent = fortune.dateLabel;
+
+  const setsWrap = document.getElementById('sets-wrap');
+  setsWrap.innerHTML = currentUser.sets.map((set,i)=>{
+    return `<div class="combo-row">
+      <div class="combo-balls">${set.map(n=>`<div class="ball">${n}</div>`).join('')}</div>
+    </div>`;
+  }).join('');
+}
+
+/* ---------------- palm / face photo reading ---------------- */
+const photoState = {
+  palm: { base64:null, mediaType:null },
+  face: { base64:null, mediaType:null }
+};
+
+function resetPhotoScreen(type){
+  photoState[type] = { base64:null, mediaType:null };
+  document.getElementById(type+'-file-input').value = '';
+  const frame = document.getElementById(type+'-photo-frame');
+  frame.innerHTML = type==='palm'
+    ? '<span class="photo-placeholder">✋<br>사진 없음</span>'
+    : '<span class="photo-placeholder">👤<br>사진 없음</span>';
+  document.getElementById(type+'-analyze-btn').style.display = 'none';
+  document.getElementById(type+'-err').textContent = '';
+  document.getElementById(type+'-result-card').classList.add('hidden');
+}
+
+function onPhotoSelected(type){
+  const input = document.getElementById(type+'-file-input');
+  const errEl = document.getElementById(type+'-err');
+  errEl.textContent = '';
+  const file = input.files && input.files[0];
+  if(!file) return;
+  if(!file.type.startsWith('image/')){
+    errEl.textContent = '이미지 파일만 업로드할 수 있어요.';
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = function(e){
+    const dataUrl = e.target.result;
+    const [header, base64] = dataUrl.split(',');
+    const mediaType = header.match(/data:(.*);base64/)[1];
+    photoState[type] = { base64, mediaType };
+
+    const frame = document.getElementById(type+'-photo-frame');
+    frame.innerHTML = `<img src="${dataUrl}" alt="${type==='palm'?'손금 사진':'얼굴 사진'}">`;
+    document.getElementById(type+'-analyze-btn').style.display = 'block';
+    document.getElementById(type+'-result-card').classList.add('hidden');
+  };
+  reader.onerror = function(){
+    errEl.textContent = '사진을 불러오는 데 실패했습니다. 다시 시도해 주세요.';
+  };
+  reader.readAsDataURL(file);
+}
+
+// The prompts and Anthropic API key now live only on the backend server (see /api/analyze),
+// so they never need to be exposed in this client-side file.
+const ANALYZE_ENDPOINT = '/api/analyze';
+
+async function callBackendAnalyze(type, base64, mediaType){
+  const response = await fetch(ANALYZE_ENDPOINT, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ type, base64, mediaType })
+  });
+  const data = await response.json().catch(()=>null);
+  if(!response.ok){
+    throw new Error((data && data.error) || ('서버 응답 오류 (' + response.status + ')'));
+  }
+  if(!data || !data.result){ throw new Error('AI로부터 결과를 받지 못했습니다.'); }
+  return data.result;
+}
+
+async function analyzePhoto(type){
+  const state = photoState[type];
+  const errEl = document.getElementById(type+'-err');
+  const btn = document.getElementById(type+'-analyze-btn');
+  errEl.textContent = '';
+  if(!state.base64){
+    errEl.textContent = '먼저 사진을 촬영하거나 선택해 주세요.';
+    return;
+  }
+  const originalLabel = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'AI가 분석 중이에요...';
+  try{
+    const resultText = await callBackendAnalyze(type, state.base64, state.mediaType);
+    document.getElementById(type+'-result-text').textContent = resultText;
+    document.getElementById(type+'-result-card').classList.remove('hidden');
+  }catch(e){
+    console.error(e);
+    errEl.textContent = 'AI 분석에 실패했습니다: ' + e.message;
+  }finally{
+    btn.disabled = false;
+    btn.textContent = originalLabel;
+  }
+}
+
+/* ---------------- boot ---------------- */
+let currentUser = null;
+async function boot(){
+  fillBirthSelects();
+  const session = await getSession();
+  if(session && session.phone){
+    const user = await loadUser(session.phone);
+    if(user){
+      currentUser = user;
+      await enterAfterAuth();
+      return;
+    }
+  }
+  showScreen('signup');
+}
+boot();
+</script>
+</body>
+</html>
