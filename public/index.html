@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>사주행운 · 명리 기반 행운번호</title>
+<meta name="description" content="생년월일시로 보는 사주팔자, AI 손금·관상 풀이, 오늘의 행운번호를 알려주는 앱">
+<meta name="theme-color" content="#b23b34">
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="사주행운">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700;900&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -1479,6 +1487,15 @@ async function analyzePhoto(type){
 
 /* ---------------- boot ---------------- */
 let currentUser = null;
+/* ---------------- PWA: service worker registration ---------------- */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch((err) => {
+      console.warn('서비스워커 등록 실패:', err);
+    });
+  });
+}
+
 async function boot(){
   fillBirthSelects();
   const session = await getSession();

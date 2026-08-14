@@ -1,0 +1,41 @@
+{
+  "name": "사주행운 - 명리로 찾는 오늘의 행운번호",
+  "short_name": "사주행운",
+  "description": "생년월일시로 보는 사주팔자, AI 손금·관상 풀이, 오늘의 행운번호를 알려주는 앱",
+  "id": "/",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#a9cfec",
+  "theme_color": "#b23b34",
+  "lang": "ko",
+  "dir": "ltr",
+  "categories": ["lifestyle", "entertainment"],
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192-maskable.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
