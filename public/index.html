@@ -481,7 +481,8 @@
       <input type="text" id="su-name" placeholder="홍길동" maxlength="20">
 
       <label for="su-phone">전화번호 (아이디)</label>
-      <input type="tel" id="su-phone" placeholder="010-1234-5678" maxlength="13">
+      <input type="tel" id="su-phone" inputmode="numeric" placeholder="01012345678" maxlength="11" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+      <div class="hint">하이픈(-) 없이 숫자만 입력해 주세요. (예: 01012345678)</div>
 
       <label for="su-pw">비밀번호</label>
       <input type="password" id="su-pw" placeholder="영문·숫자·특수문자 포함 8자 이상">
@@ -503,7 +504,8 @@
       <p class="desc">가입하신 전화번호와 비밀번호로 로그인하세요.</p>
 
       <label for="li-phone">전화번호 (아이디)</label>
-      <input type="tel" id="li-phone" placeholder="010-1234-5678" maxlength="13">
+      <input type="tel" id="li-phone" inputmode="numeric" placeholder="01012345678" maxlength="11" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+      <div class="hint">하이픈(-) 없이 숫자만 입력해 주세요.</div>
 
       <label for="li-pw">비밀번호</label>
       <input type="password" id="li-pw" placeholder="비밀번호">
@@ -511,7 +513,36 @@
       <div class="err" id="li-err"></div>
       <button class="btn-primary" onclick="handleLogin()">로그인</button>
     </div>
+    <div class="link-row"><a onclick="showScreen('reset')">비밀번호를 잊으셨나요?</a></div>
     <div class="link-row">처음이신가요? <a onclick="showScreen('signup')">회원가입</a></div>
+  </div>
+
+  <!-- PASSWORD RESET -->
+  <div id="screen-reset" class="screen hidden">
+    <div class="card">
+      <h2>비밀번호 재설정</h2>
+      <p class="desc">가입 시 입력하신 이름과 전화번호를 입력해 주세요. 확인되면 새 비밀번호를 설정할 수 있어요.</p>
+
+      <label for="rs-name">이름</label>
+      <input type="text" id="rs-name" placeholder="홍길동" maxlength="20">
+
+      <label for="rs-phone">전화번호 (아이디)</label>
+      <input type="tel" id="rs-phone" inputmode="numeric" placeholder="01012345678" maxlength="11" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+
+      <div id="rs-step2" class="hidden">
+        <label for="rs-pw">새 비밀번호</label>
+        <input type="password" id="rs-pw" placeholder="영문·숫자·특수문자 포함 8자 이상">
+        <div class="hint">영문, 숫자, 특수문자를 모두 포함해 8자 이상으로 설정해 주세요.</div>
+
+        <label for="rs-pw2">새 비밀번호 확인</label>
+        <input type="password" id="rs-pw2" placeholder="비밀번호를 한 번 더 입력">
+      </div>
+
+      <div class="err" id="rs-err"></div>
+      <button class="btn-primary" id="rs-verify-btn" onclick="handleResetVerify()">본인 확인하기</button>
+      <button class="btn-primary hidden" id="rs-save-btn" onclick="handleResetSave()">비밀번호 변경하기</button>
+    </div>
+    <div class="link-row"><a onclick="showScreen('login')">로그인으로 돌아가기</a></div>
   </div>
 
   <!-- HOME HUB -->
@@ -736,7 +767,7 @@ function isValidPassword(v){
 
 /* ---------------- screens ---------------- */
 function showScreen(name){
-  ['signup','login','home','birth','result','palm','face'].forEach(s=>{
+  ['signup','login','reset','home','birth','result','palm','face'].forEach(s=>{
     document.getElementById('screen-'+s).classList.toggle('hidden', s!==name);
   });
   window.scrollTo(0,0);
@@ -797,7 +828,70 @@ async function logout(){
   document.getElementById('su-pw2').value='';
   document.getElementById('li-phone').value='';
   document.getElementById('li-pw').value='';
+  resetPasswordResetScreen();
   showScreen('login');
+}
+
+/* ---------------- password reset ---------------- */
+let resetVerifiedPhone = null;
+
+function resetPasswordResetScreen(){
+  resetVerifiedPhone = null;
+  document.getElementById('rs-name').value='';
+  document.getElementById('rs-phone').value='';
+  document.getElementById('rs-pw').value='';
+  document.getElementById('rs-pw2').value='';
+  document.getElementById('rs-err').textContent='';
+  document.getElementById('rs-step2').classList.add('hidden');
+  document.getElementById('rs-verify-btn').classList.remove('hidden');
+  document.getElementById('rs-save-btn').classList.add('hidden');
+  document.getElementById('rs-name').disabled = false;
+  document.getElementById('rs-phone').disabled = false;
+}
+
+async function handleResetVerify(){
+  const name = document.getElementById('rs-name').value.trim();
+  const phoneRaw = document.getElementById('rs-phone').value.trim();
+  const errEl = document.getElementById('rs-err');
+  errEl.textContent='';
+
+  if(!name){ errEl.textContent='이름을 입력해 주세요.'; return; }
+  if(!isValidPhone(phoneRaw)){ errEl.textContent='전화번호를 정확히 입력해 주세요.'; return; }
+
+  const phone = normalizePhone(phoneRaw);
+  const user = await loadUser(phone);
+  if(!user || user.name !== name){
+    errEl.textContent = '일치하는 회원 정보를 찾을 수 없습니다. 이름과 전화번호를 다시 확인해 주세요.';
+    return;
+  }
+
+  resetVerifiedPhone = phone;
+  document.getElementById('rs-name').disabled = true;
+  document.getElementById('rs-phone').disabled = true;
+  document.getElementById('rs-step2').classList.remove('hidden');
+  document.getElementById('rs-verify-btn').classList.add('hidden');
+  document.getElementById('rs-save-btn').classList.remove('hidden');
+}
+
+async function handleResetSave(){
+  const errEl = document.getElementById('rs-err');
+  errEl.textContent='';
+  if(!resetVerifiedPhone){ errEl.textContent='본인 확인을 먼저 진행해 주세요.'; return; }
+
+  const pw = document.getElementById('rs-pw').value;
+  const pw2 = document.getElementById('rs-pw2').value;
+  if(!isValidPassword(pw)){ errEl.textContent='비밀번호는 영문, 숫자, 특수문자를 포함해 8자 이상이어야 합니다.'; return; }
+  if(pw!==pw2){ errEl.textContent='비밀번호가 일치하지 않습니다.'; return; }
+
+  const user = await loadUser(resetVerifiedPhone);
+  if(!user){ errEl.textContent='회원 정보를 찾을 수 없습니다.'; return; }
+
+  user.password = pw;
+  await saveUser(user);
+
+  resetPasswordResetScreen();
+  showScreen('login');
+  document.getElementById('li-err').textContent = '비밀번호가 변경되었습니다. 새 비밀번호로 로그인해 주세요.';
 }
 
 async function enterAfterAuth(){
