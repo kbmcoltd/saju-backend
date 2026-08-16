@@ -177,6 +177,27 @@
     font-weight:700;
     border-color:transparent;
   }
+  .lang-toggle{
+    display:flex;
+    gap:4px;
+    flex-shrink:0;
+    align-self:flex-start;
+  }
+  .lang-toggle-btn{
+    background:rgba(255,255,255,.55);
+    border:1px solid rgba(44,42,58,.18);
+    border-radius:8px;
+    padding:5px 9px;
+    font-size:10.5px;
+    font-weight:700;
+    letter-spacing:.3px;
+    color:#6c6a78;
+  }
+  .lang-toggle-btn.active{
+    background:linear-gradient(135deg,var(--gold-soft),var(--gold));
+    color:#211a08;
+    border-color:transparent;
+  }
   .leap-row{
     margin-top:12px;
     background:#151928;
@@ -469,9 +490,13 @@
 
   <div class="brand">
     <div class="seal">四柱</div>
-    <div>
-      <h1 class="title">사주행운</h1>
-      <p class="subtitle">명리(命理)로 찾는 오늘의 행운번호</p>
+    <div style="flex:1;">
+      <h1 class="title" data-i18n="app.title">사주행운</h1>
+      <p class="subtitle" data-i18n="app.subtitle">명리(命理)로 찾는 오늘의 행운번호</p>
+    </div>
+    <div class="lang-toggle">
+      <button type="button" id="lang-ko-btn" class="lang-toggle-btn active" onclick="setLang('ko')">KOR</button>
+      <button type="button" id="lang-en-btn" class="lang-toggle-btn" onclick="setLang('en')">ENG</button>
     </div>
   </div>
   <div class="rule"></div>
@@ -479,100 +504,106 @@
   <!-- SIGNUP -->
   <div id="screen-signup" class="screen">
     <div class="card">
-      <h2>회원가입</h2>
-      <p class="desc">이름과 전화번호, 비밀번호를 입력해 주세요. 전화번호가 아이디가 됩니다.</p>
+      <h2 data-i18n="signup.title">회원가입</h2>
+      <p class="desc" data-i18n="signup.desc">이름과 전화번호, 비밀번호를 입력해 주세요. 전화번호가 아이디가 됩니다.</p>
 
-      <label for="su-name">이름</label>
-      <input type="text" id="su-name" placeholder="홍길동" maxlength="20">
+      <label for="su-name" data-i18n="field.name">이름</label>
+      <input type="text" id="su-name" data-i18n-placeholder="field.name.placeholder" placeholder="홍길동" maxlength="20">
 
-      <label for="su-phone">전화번호 (아이디)</label>
+      <label for="su-phone" data-i18n="field.phone">전화번호 (아이디)</label>
       <input type="tel" id="su-phone" inputmode="numeric" placeholder="01012345678" maxlength="11" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
-      <div class="hint">하이픈(-) 없이 숫자만 입력해 주세요. (예: 01012345678)</div>
+      <div class="hint" data-i18n="field.phone.hint">하이픈(-) 없이 숫자만 입력해 주세요. (예: 01012345678)</div>
 
-      <label for="su-pw">비밀번호</label>
-      <input type="password" id="su-pw" placeholder="영문·숫자·특수문자 포함 8자 이상">
-      <div class="hint">영문, 숫자, 특수문자를 모두 포함해 8자 이상으로 설정해 주세요.</div>
+      <label for="su-pw" data-i18n="field.password">비밀번호</label>
+      <input type="password" id="su-pw" data-i18n-placeholder="field.password.placeholder" placeholder="영문·숫자·특수문자 포함 8자 이상">
+      <div class="hint" data-i18n="field.password.hint">영문, 숫자, 특수문자를 모두 포함해 8자 이상으로 설정해 주세요.</div>
 
-      <label for="su-pw2">비밀번호 확인</label>
-      <input type="password" id="su-pw2" placeholder="비밀번호를 한 번 더 입력">
+      <label for="su-pw2" data-i18n="field.password2">비밀번호 확인</label>
+      <input type="password" id="su-pw2" data-i18n-placeholder="field.password2.placeholder" placeholder="비밀번호를 한 번 더 입력">
 
       <div class="err" id="su-err"></div>
-      <button class="btn-primary" onclick="handleSignup()">가입하고 시작하기</button>
+      <button class="btn-primary" data-i18n="signup.submit" onclick="handleSignup()">가입하고 시작하기</button>
     </div>
-    <div class="link-row">이미 계정이 있으신가요? <a onclick="showScreen('login')">로그인</a></div>
+    <div class="link-row"><span data-i18n="signup.haveAccount">이미 계정이 있으신가요? </span><a data-i18n="nav.login" onclick="showScreen('login')">로그인</a></div>
   </div>
 
   <!-- LOGIN -->
   <div id="screen-login" class="screen hidden">
     <div class="card">
-      <h2>로그인</h2>
-      <p class="desc">가입하신 전화번호와 비밀번호로 로그인하세요.</p>
+      <h2 data-i18n="login.title">로그인</h2>
+      <p class="desc" data-i18n="login.desc">가입하신 전화번호와 비밀번호로 로그인하세요.</p>
 
-      <label for="li-phone">전화번호 (아이디)</label>
+      <label for="li-phone" data-i18n="field.phone">전화번호 (아이디)</label>
       <input type="tel" id="li-phone" inputmode="numeric" placeholder="01012345678" maxlength="11" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
-      <div class="hint">하이픈(-) 없이 숫자만 입력해 주세요.</div>
+      <div class="hint" data-i18n="field.phone.hint2">하이픈(-) 없이 숫자만 입력해 주세요.</div>
 
-      <label for="li-pw">비밀번호</label>
-      <input type="password" id="li-pw" placeholder="비밀번호">
+      <label for="li-pw" data-i18n="field.password">비밀번호</label>
+      <input type="password" id="li-pw" data-i18n-placeholder="field.password.simple" placeholder="비밀번호">
 
       <div class="err" id="li-err"></div>
-      <button class="btn-primary" onclick="handleLogin()">로그인</button>
+      <button class="btn-primary" data-i18n="login.submit" onclick="handleLogin()">로그인</button>
     </div>
-    <div class="link-row"><a onclick="showScreen('reset')">비밀번호를 잊으셨나요?</a></div>
-    <div class="link-row">처음이신가요? <a onclick="showScreen('signup')">회원가입</a></div>
+    <div class="link-row"><a data-i18n="login.forgotPassword" onclick="showScreen('reset')">비밀번호를 잊으셨나요?</a></div>
+    <div class="link-row"><span data-i18n="login.firstTime">처음이신가요? </span><a data-i18n="signup.title" onclick="showScreen('signup')">회원가입</a></div>
   </div>
 
   <!-- PASSWORD RESET -->
   <div id="screen-reset" class="screen hidden">
     <div class="card">
-      <h2>비밀번호 재설정</h2>
-      <p class="desc">가입 시 입력하신 이름과 전화번호를 입력해 주세요. 확인되면 새 비밀번호를 설정할 수 있어요.</p>
+      <h2 data-i18n="reset.title">비밀번호 재설정</h2>
+      <p class="desc" data-i18n="reset.desc">가입 시 입력하신 이름과 전화번호를 입력해 주세요. 확인되면 새 비밀번호를 설정할 수 있어요.</p>
 
-      <label for="rs-name">이름</label>
-      <input type="text" id="rs-name" placeholder="홍길동" maxlength="20">
+      <label for="rs-name" data-i18n="field.name">이름</label>
+      <input type="text" id="rs-name" data-i18n-placeholder="field.name.placeholder" placeholder="홍길동" maxlength="20">
 
-      <label for="rs-phone">전화번호 (아이디)</label>
+      <label for="rs-phone" data-i18n="field.phone">전화번호 (아이디)</label>
       <input type="tel" id="rs-phone" inputmode="numeric" placeholder="01012345678" maxlength="11" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
 
       <div id="rs-step2" class="hidden">
-        <label for="rs-pw">새 비밀번호</label>
-        <input type="password" id="rs-pw" placeholder="영문·숫자·특수문자 포함 8자 이상">
-        <div class="hint">영문, 숫자, 특수문자를 모두 포함해 8자 이상으로 설정해 주세요.</div>
+        <label for="rs-pw" data-i18n="reset.newPassword">새 비밀번호</label>
+        <input type="password" id="rs-pw" data-i18n-placeholder="field.password.placeholder" placeholder="영문·숫자·특수문자 포함 8자 이상">
+        <div class="hint" data-i18n="field.password.hint">영문, 숫자, 특수문자를 모두 포함해 8자 이상으로 설정해 주세요.</div>
 
-        <label for="rs-pw2">새 비밀번호 확인</label>
-        <input type="password" id="rs-pw2" placeholder="비밀번호를 한 번 더 입력">
+        <label for="rs-pw2" data-i18n="reset.newPassword2">새 비밀번호 확인</label>
+        <input type="password" id="rs-pw2" data-i18n-placeholder="field.password2.placeholder" placeholder="비밀번호를 한 번 더 입력">
       </div>
 
       <div class="err" id="rs-err"></div>
-      <button class="btn-primary" id="rs-verify-btn" onclick="handleResetVerify()">본인 확인하기</button>
-      <button class="btn-primary hidden" id="rs-save-btn" onclick="handleResetSave()">비밀번호 변경하기</button>
+      <button class="btn-primary" id="rs-verify-btn" data-i18n="reset.verify" onclick="handleResetVerify()">본인 확인하기</button>
+      <button class="btn-primary hidden" id="rs-save-btn" data-i18n="reset.save" onclick="handleResetSave()">비밀번호 변경하기</button>
     </div>
-    <div class="link-row"><a onclick="showScreen('login')">로그인으로 돌아가기</a></div>
+    <div class="link-row"><a data-i18n="reset.backToLogin" onclick="showScreen('login')">로그인으로 돌아가기</a></div>
   </div>
 
   <!-- HOME HUB -->
   <div id="screen-home" class="screen hidden">
     <div class="top-actions">
-      <div class="greet"><b id="home-name-slot"></b>님, 어서 오세요</div>
-      <button class="logout" onclick="logout()">로그아웃</button>
+      <div class="greet"><b id="home-name-slot"></b><span data-i18n="greet.suffix.home">님, 어서 오세요</span></div>
+      <button class="logout" data-i18n="nav.logout" onclick="logout()">로그아웃</button>
     </div>
-    <p class="hub-lead">오늘은 무엇을 봐드릴까요?</p>
+    <p class="hub-lead" data-i18n="home.lead">오늘은 무엇을 봐드릴까요?</p>
 
     <div class="hub-grid">
       <button class="hub-card" onclick="goToSaju()">
         <div class="hub-icon hub-icon-gold">☀️</div>
-        <div class="hub-label">사주팔자</div>
-        <div class="hub-sub">생년월일시로 보는 사주와 행운번호</div>
+        <div>
+          <div class="hub-label" data-i18n="home.saju.label">사주팔자</div>
+          <div class="hub-sub" data-i18n="home.saju.sub">생년월일시로 보는 사주와 행운번호</div>
+        </div>
       </button>
       <button class="hub-card" onclick="goToPalm()">
         <div class="hub-icon hub-icon-teal">✋</div>
-        <div class="hub-label">손금 보기</div>
-        <div class="hub-sub">손바닥 사진으로 보는 AI 손금</div>
+        <div>
+          <div class="hub-label" data-i18n="home.palm.label">손금 보기</div>
+          <div class="hub-sub" data-i18n="home.palm.sub">손바닥 사진으로 보는 AI 손금</div>
+        </div>
       </button>
       <button class="hub-card" onclick="goToFace()">
         <div class="hub-icon hub-icon-vermilion">👁</div>
-        <div class="hub-label">관상 보기</div>
-        <div class="hub-sub">얼굴 사진으로 보는 AI 인상 총평</div>
+        <div>
+          <div class="hub-label" data-i18n="home.face.label">관상 보기</div>
+          <div class="hub-sub" data-i18n="home.face.sub">얼굴 사진으로 보는 AI 인상 총평</div>
+        </div>
       </button>
     </div>
   </div>
@@ -580,24 +611,24 @@
   <!-- BIRTH INPUT -->
   <div id="screen-birth" class="screen hidden">
     <div class="top-actions">
-      <div class="greet"><b id="birth-name-slot"></b>님</div>
+      <div class="greet"><b id="birth-name-slot"></b><span data-i18n="greet.suffix.plain">님</span></div>
       <div class="top-actions-btns">
-        <button class="logout" onclick="showScreen('home')">홈</button>
-        <button class="logout" onclick="logout()">로그아웃</button>
+        <button class="logout" data-i18n="nav.home" onclick="showScreen('home')">홈</button>
+        <button class="logout" data-i18n="nav.logout" onclick="logout()">로그아웃</button>
       </div>
     </div>
     <div class="card">
-      <h2>생년월일시 입력</h2>
-      <p class="desc">태어난 연월일시를 입력하면 사주팔자와 행운번호를 알려드려요. 시간을 모르면 '모름'을 선택하세요.</p>
+      <h2 data-i18n="birth.title">생년월일시 입력</h2>
+      <p class="desc" data-i18n="birth.desc">태어난 연월일시를 입력하면 사주팔자와 행운번호를 알려드려요. 시간을 모르면 '모름'을 선택하세요.</p>
 
-      <label>달력 기준</label>
+      <label data-i18n="birth.calendarType">달력 기준</label>
       <div class="cal-toggle">
-        <button type="button" id="cal-solar-btn" class="cal-toggle-btn active" onclick="setCalendarType('solar')">양력</button>
-        <button type="button" id="cal-lunar-btn" class="cal-toggle-btn" onclick="setCalendarType('lunar')">음력</button>
+        <button type="button" id="cal-solar-btn" class="cal-toggle-btn active" data-i18n="birth.solar" onclick="setCalendarType('solar')">양력</button>
+        <button type="button" id="cal-lunar-btn" class="cal-toggle-btn" data-i18n="birth.lunar" onclick="setCalendarType('lunar')">음력</button>
       </div>
-      <div class="hint">실제 태어난 날짜가 양력인지 음력인지 선택해 주세요. 음력을 선택하면 자동으로 양력으로 변환해 사주를 계산합니다.</div>
+      <div class="hint" data-i18n="birth.calendarHint">실제 태어난 날짜가 양력인지 음력인지 선택해 주세요. 음력을 선택하면 자동으로 양력으로 변환해 사주를 계산합니다.</div>
 
-      <label>생년월일</label>
+      <label data-i18n="birth.dateLabel">생년월일</label>
       <div class="row3">
         <select id="b-year"></select>
         <select id="b-month"></select>
@@ -607,31 +638,31 @@
       <div id="leap-month-wrap" class="leap-row hidden">
         <label class="leap-check">
           <input type="checkbox" id="b-leap">
-          <span>윤달(閏月)입니다</span>
+          <span data-i18n="birth.leapMonth">윤달(閏月)입니다</span>
         </label>
         <div class="hint" id="leap-hint"></div>
       </div>
 
-      <label for="b-hour">태어난 시각</label>
+      <label for="b-hour" data-i18n="birth.hourLabel">태어난 시각</label>
       <select id="b-hour"></select>
 
       <div class="err" id="b-err"></div>
-      <button class="btn-primary" onclick="handleBirthSubmit()">사주 풀이 보기</button>
+      <button class="btn-primary" data-i18n="birth.submit" onclick="handleBirthSubmit()">사주 풀이 보기</button>
     </div>
   </div>
 
   <!-- RESULT -->
   <div id="screen-result" class="screen hidden">
     <div class="top-actions">
-      <div class="greet"><b id="result-name-slot"></b>님의 사주</div>
+      <div class="greet"><b id="result-name-slot"></b><span data-i18n="greet.suffix.result">님의 사주</span></div>
       <div class="top-actions-btns">
-        <button class="logout" onclick="showScreen('home')">홈</button>
-        <button class="logout" onclick="logout()">로그아웃</button>
+        <button class="logout" data-i18n="nav.home" onclick="showScreen('home')">홈</button>
+        <button class="logout" data-i18n="nav.logout" onclick="logout()">로그아웃</button>
       </div>
     </div>
 
     <div class="card card-light">
-      <h2>사주팔자 (四柱八字)</h2>
+      <h2 data-i18n="result.pillars.title">사주팔자 (四柱八字)</h2>
       <p class="desc" id="result-birth-desc"></p>
 
       <div class="pillars" id="pillars-wrap"></div>
@@ -639,96 +670,258 @@
     </div>
 
     <div class="card card-light">
-      <h2>오늘의 사주 운세</h2>
+      <h2 data-i18n="result.fortune.title">오늘의 사주 운세</h2>
       <div id="fortune-tag-wrap"></div>
       <div class="fortune-items" id="fortune-items"></div>
       <div class="fortune-date" id="fortune-date"></div>
     </div>
 
     <div class="card card-light">
-      <h2>행운의 숫자 10</h2>
-      <p class="desc">사주 여덟 글자의 기운으로 뽑은 오늘의 행운 숫자예요.</p>
+      <h2 data-i18n="result.lucky.title">행운의 숫자 10</h2>
+      <p class="desc" data-i18n="result.lucky.desc">사주 여덟 글자의 기운으로 뽑은 오늘의 행운 숫자예요.</p>
       <div class="ball-grid" id="lucky10-wrap"></div>
     </div>
 
     <div class="card card-light">
-      <h2>추천 조합 5세트</h2>
-      <p class="desc">행운의 숫자 10개 중 6개씩 조합한 다섯 세트를 한눈에 볼 수 있어요.</p>
+      <h2 data-i18n="result.sets.title">추천 조합 5세트</h2>
+      <p class="desc" data-i18n="result.sets.desc">행운의 숫자 10개 중 6개씩 조합한 다섯 세트를 한눈에 볼 수 있어요.</p>
       <div class="combo-table" id="sets-wrap"></div>
-      <div class="disclaimer">
+      <div class="disclaimer" data-i18n="result.disclaimer">
         본 결과는 전통 명리학 이론을 간단화하여 재미로 제공하는 콘텐츠입니다. 실제 만세력과 다를 수 있으며, 어떠한 결과도 보장하지 않습니다.
       </div>
     </div>
 
-    <button class="btn-ghost" onclick="showScreen('birth')">생년월일시 다시 입력</button>
-    <button class="btn-ghost" onclick="showScreen('home')">홈으로</button>
+    <button class="btn-ghost" data-i18n="result.reenter" onclick="showScreen('birth')">생년월일시 다시 입력</button>
+    <button class="btn-ghost" data-i18n="result.toHome" onclick="showScreen('home')">홈으로</button>
   </div>
 
   <!-- PALM READING -->
   <div id="screen-palm" class="screen hidden">
     <div class="top-actions">
-      <div class="greet"><b id="palm-name-slot"></b>님의 손금</div>
+      <div class="greet"><b id="palm-name-slot"></b><span data-i18n="greet.suffix.palm">님의 손금</span></div>
       <div class="top-actions-btns">
-        <button class="logout" onclick="showScreen('home')">홈</button>
-        <button class="logout" onclick="logout()">로그아웃</button>
+        <button class="logout" data-i18n="nav.home" onclick="showScreen('home')">홈</button>
+        <button class="logout" data-i18n="nav.logout" onclick="logout()">로그아웃</button>
       </div>
     </div>
 
     <div class="card card-light">
-      <h2>손금 촬영</h2>
-      <p class="desc">손바닥을 펴고 화면 가득 나오도록 밝은 곳에서 촬영해 주세요. 촬영한 사진은 AI 분석에만 사용되며 서버에 저장되지 않습니다.</p>
+      <h2 data-i18n="palm.captureTitle">손금 촬영</h2>
+      <p class="desc" data-i18n="palm.captureDesc">손바닥을 펴고 화면 가득 나오도록 밝은 곳에서 촬영해 주세요. 촬영한 사진은 AI 분석에만 사용되며 서버에 저장되지 않습니다.</p>
 
       <div class="photo-frame" id="palm-photo-frame">
-        <span class="photo-placeholder">✋<br>사진 없음</span>
+        <span class="photo-placeholder" data-i18n="photo.none">✋<br>사진 없음</span>
       </div>
       <input type="file" id="palm-file-input" accept="image/*" capture="environment" class="hidden" onchange="onPhotoSelected('palm')">
-      <button class="btn-primary" onclick="document.getElementById('palm-file-input').click()">사진 촬영 / 선택</button>
-      <button class="btn-primary" id="palm-analyze-btn" style="display:none" onclick="analyzePhoto('palm')">AI 손금 분석하기</button>
+      <button class="btn-primary" data-i18n="photo.select" onclick="document.getElementById('palm-file-input').click()">사진 촬영 / 선택</button>
+      <button class="btn-primary" id="palm-analyze-btn" style="display:none" data-i18n="palm.analyze" onclick="analyzePhoto('palm')">AI 손금 분석하기</button>
       <div class="err" id="palm-err"></div>
     </div>
 
     <div class="card card-light hidden" id="palm-result-card">
-      <h2>AI 손금 풀이</h2>
+      <h2 data-i18n="palm.resultTitle">AI 손금 풀이</h2>
       <p class="fortune-text" id="palm-result-text"></p>
-      <div class="disclaimer">본 결과는 전통 손금 풀이 스타일을 재미로 재구성한 AI 콘텐츠이며, 의학적·과학적 진단이 아닙니다.</div>
+      <div class="disclaimer" data-i18n="palm.disclaimer">본 결과는 전통 손금 풀이 스타일을 재미로 재구성한 AI 콘텐츠이며, 의학적·과학적 진단이 아닙니다.</div>
     </div>
   </div>
 
   <!-- FACE READING -->
   <div id="screen-face" class="screen hidden">
     <div class="top-actions">
-      <div class="greet"><b id="face-name-slot"></b>님의 관상</div>
+      <div class="greet"><b id="face-name-slot"></b><span data-i18n="greet.suffix.face">님의 관상</span></div>
       <div class="top-actions-btns">
-        <button class="logout" onclick="showScreen('home')">홈</button>
-        <button class="logout" onclick="logout()">로그아웃</button>
+        <button class="logout" data-i18n="nav.home" onclick="showScreen('home')">홈</button>
+        <button class="logout" data-i18n="nav.logout" onclick="logout()">로그아웃</button>
       </div>
     </div>
 
     <div class="card card-light">
-      <h2>얼굴 촬영</h2>
-      <p class="desc">정면을 바라보고 얼굴 전체가 나오도록 밝은 곳에서 촬영해 주세요. 촬영한 사진은 AI 분석에만 사용되며 서버에 저장되지 않습니다.</p>
+      <h2 data-i18n="face.captureTitle">얼굴 촬영</h2>
+      <p class="desc" data-i18n="face.captureDesc">정면을 바라보고 얼굴 전체가 나오도록 밝은 곳에서 촬영해 주세요. 촬영한 사진은 AI 분석에만 사용되며 서버에 저장되지 않습니다.</p>
 
       <div class="photo-frame" id="face-photo-frame">
-        <span class="photo-placeholder">👤<br>사진 없음</span>
+        <span class="photo-placeholder" data-i18n="photo.none2">👤<br>사진 없음</span>
       </div>
       <input type="file" id="face-file-input" accept="image/*" capture="user" class="hidden" onchange="onPhotoSelected('face')">
-      <button class="btn-primary" onclick="document.getElementById('face-file-input').click()">사진 촬영 / 선택</button>
-      <button class="btn-primary" id="face-analyze-btn" style="display:none" onclick="analyzePhoto('face')">AI 관상 분석하기</button>
+      <button class="btn-primary" data-i18n="photo.select" onclick="document.getElementById('face-file-input').click()">사진 촬영 / 선택</button>
+      <button class="btn-primary" id="face-analyze-btn" style="display:none" data-i18n="face.analyze" onclick="analyzePhoto('face')">AI 관상 분석하기</button>
       <div class="err" id="face-err"></div>
     </div>
 
     <div class="card card-light hidden" id="face-result-card">
-      <h2>AI 관상 총평</h2>
+      <h2 data-i18n="face.resultTitle">AI 관상 총평</h2>
       <p class="fortune-text" id="face-result-text"></p>
-      <div class="disclaimer">본 결과는 전통 관상 풀이 스타일을 재미로 재구성한 AI 콘텐츠이며, 외모 평가나 의학적 진단이 아닙니다.</div>
+      <div class="disclaimer" data-i18n="face.disclaimer">본 결과는 전통 관상 풀이 스타일을 재미로 재구성한 AI 콘텐츠이며, 외모 평가나 의학적 진단이 아닙니다.</div>
     </div>
   </div>
 
 </div>
 
 <script>
+/* ---------------- i18n (Korean / English) ---------------- */
+const TRANSLATIONS = {
+  'app.title': { ko: '사주행운', en: 'Saju Fortune' },
+  'app.subtitle': { ko: '명리(命理)로 찾는 오늘의 행운번호', en: "Today's lucky numbers from Korean fortune-telling" },
+  'signup.title': { ko: '회원가입', en: 'Sign Up' },
+  'signup.desc': { ko: '이름과 전화번호, 비밀번호를 입력해 주세요. 전화번호가 아이디가 됩니다.', en: 'Enter your name, phone number, and password. Your phone number will be your username.' },
+  'signup.submit': { ko: '가입하고 시작하기', en: 'Sign Up & Start' },
+  'signup.haveAccount': { ko: '이미 계정이 있으신가요? ', en: 'Already have an account? ' },
+  'field.name': { ko: '이름', en: 'Name' },
+  'field.name.placeholder': { ko: '홍길동', en: 'John Doe' },
+  'field.phone': { ko: '전화번호 (아이디)', en: 'Phone Number (Username)' },
+  'field.phone.hint': { ko: '하이픈(-) 없이 숫자만 입력해 주세요. (예: 01012345678)', en: 'Numbers only, no hyphens. (e.g. 01012345678)' },
+  'field.phone.hint2': { ko: '하이픈(-) 없이 숫자만 입력해 주세요.', en: 'Numbers only, no hyphens.' },
+  'field.password': { ko: '비밀번호', en: 'Password' },
+  'field.password.placeholder': { ko: '영문·숫자·특수문자 포함 8자 이상', en: '8+ chars incl. letters, numbers & symbols' },
+  'field.password.simple': { ko: '비밀번호', en: 'Password' },
+  'field.password.hint': { ko: '영문, 숫자, 특수문자를 모두 포함해 8자 이상으로 설정해 주세요.', en: 'Must include letters, numbers, and symbols, at least 8 characters.' },
+  'field.password2': { ko: '비밀번호 확인', en: 'Confirm Password' },
+  'field.password2.placeholder': { ko: '비밀번호를 한 번 더 입력', en: 'Re-enter your password' },
+  'nav.login': { ko: '로그인', en: 'Log In' },
+  'nav.logout': { ko: '로그아웃', en: 'Log Out' },
+  'nav.home': { ko: '홈', en: 'Home' },
+  'login.title': { ko: '로그인', en: 'Log In' },
+  'login.desc': { ko: '가입하신 전화번호와 비밀번호로 로그인하세요.', en: 'Log in with your registered phone number and password.' },
+  'login.submit': { ko: '로그인', en: 'Log In' },
+  'login.forgotPassword': { ko: '비밀번호를 잊으셨나요?', en: 'Forgot your password?' },
+  'login.firstTime': { ko: '처음이신가요? ', en: 'New here? ' },
+  'reset.title': { ko: '비밀번호 재설정', en: 'Reset Password' },
+  'reset.desc': { ko: '가입 시 입력하신 이름과 전화번호를 입력해 주세요. 확인되면 새 비밀번호를 설정할 수 있어요.', en: 'Enter the name and phone number you signed up with. Once verified, you can set a new password.' },
+  'reset.newPassword': { ko: '새 비밀번호', en: 'New Password' },
+  'reset.newPassword2': { ko: '새 비밀번호 확인', en: 'Confirm New Password' },
+  'reset.verify': { ko: '본인 확인하기', en: 'Verify Identity' },
+  'reset.save': { ko: '비밀번호 변경하기', en: 'Change Password' },
+  'reset.backToLogin': { ko: '로그인으로 돌아가기', en: 'Back to Log In' },
+  'greet.suffix.home': { ko: '님, 어서 오세요', en: ', welcome!' },
+  'greet.suffix.plain': { ko: '님', en: '' },
+  'greet.suffix.result': { ko: '님의 사주', en: "'s Saju Reading" },
+  'greet.suffix.palm': { ko: '님의 손금', en: "'s Palm Reading" },
+  'greet.suffix.face': { ko: '님의 관상', en: "'s Face Reading" },
+  'home.lead': { ko: '오늘은 무엇을 봐드릴까요?', en: 'What would you like to see today?' },
+  'home.saju.label': { ko: '사주팔자', en: 'Saju (Four Pillars)' },
+  'home.saju.sub': { ko: '생년월일시로 보는 사주와 행운번호', en: 'Your destiny chart & lucky numbers by birth date' },
+  'home.palm.label': { ko: '손금 보기', en: 'Palm Reading' },
+  'home.palm.sub': { ko: '손바닥 사진으로 보는 AI 손금', en: 'AI palm reading from a photo of your hand' },
+  'home.face.label': { ko: '관상 보기', en: 'Face Reading' },
+  'home.face.sub': { ko: '얼굴 사진으로 보는 AI 인상 총평', en: 'AI face reading from a photo of your face' },
+  'birth.title': { ko: '생년월일시 입력', en: 'Enter Your Birth Date & Time' },
+  'birth.desc': { ko: "태어난 연월일시를 입력하면 사주팔자와 행운번호를 알려드려요. 시간을 모르면 '모름'을 선택하세요.", en: "Enter your birth date and time to see your Saju chart and lucky numbers. If you don't know the time, select 'Unknown'." },
+  'birth.calendarType': { ko: '달력 기준', en: 'Calendar Type' },
+  'birth.solar': { ko: '양력', en: 'Solar' },
+  'birth.lunar': { ko: '음력', en: 'Lunar' },
+  'birth.calendarHint': { ko: '실제 태어난 날짜가 양력인지 음력인지 선택해 주세요. 음력을 선택하면 자동으로 양력으로 변환해 사주를 계산합니다.', en: 'Select whether your actual birth date is solar or lunar. Lunar dates are automatically converted to solar for the Saju calculation.' },
+  'birth.dateLabel': { ko: '생년월일', en: 'Date of Birth' },
+  'birth.leapMonth': { ko: '윤달(閏月)입니다', en: 'This is a leap month' },
+  'birth.hourLabel': { ko: '태어난 시각', en: 'Birth Time' },
+  'birth.submit': { ko: '사주 풀이 보기', en: 'See My Saju Reading' },
+  'result.pillars.title': { ko: '사주팔자 (四柱八字)', en: 'Saju (Four Pillars)' },
+  'result.fortune.title': { ko: '오늘의 사주 운세', en: "Today's Fortune" },
+  'result.lucky.title': { ko: '행운의 숫자 10', en: '10 Lucky Numbers' },
+  'result.lucky.desc': { ko: '사주 여덟 글자의 기운으로 뽑은 오늘의 행운 숫자예요.', en: "Today's lucky numbers, drawn from the energy of your eight Saju characters." },
+  'result.sets.title': { ko: '추천 조합 5세트', en: '5 Recommended Combinations' },
+  'result.sets.desc': { ko: '행운의 숫자 10개 중 6개씩 조합한 다섯 세트를 한눈에 볼 수 있어요.', en: 'Five sets of 6 numbers combined from your 10 lucky numbers, at a glance.' },
+  'result.disclaimer': { ko: '본 결과는 전통 명리학 이론을 간단화하여 재미로 제공하는 콘텐츠입니다. 실제 만세력과 다를 수 있으며, 어떠한 결과도 보장하지 않습니다.', en: 'This content simplifies traditional Myeongni (Korean fortune-telling) theory for entertainment only. It may differ from an actual astrological almanac and guarantees no outcome.' },
+  'result.reenter': { ko: '생년월일시 다시 입력', en: 'Re-enter Birth Info' },
+  'result.toHome': { ko: '홈으로', en: 'Back to Home' },
+  'photo.none': { ko: '✋<br>사진 없음', en: '✋<br>No photo' },
+  'photo.none2': { ko: '👤<br>사진 없음', en: '👤<br>No photo' },
+  'photo.select': { ko: '사진 촬영 / 선택', en: 'Take / Choose Photo' },
+  'palm.captureTitle': { ko: '손금 촬영', en: 'Take a Palm Photo' },
+  'palm.captureDesc': { ko: '손바닥을 펴고 화면 가득 나오도록 밝은 곳에서 촬영해 주세요. 촬영한 사진은 AI 분석에만 사용되며 서버에 저장되지 않습니다.', en: 'Open your palm and take a photo in good light so it fills the frame. Your photo is used only for AI analysis and is never stored on our server.' },
+  'palm.analyze': { ko: 'AI 손금 분석하기', en: 'Analyze My Palm with AI' },
+  'palm.resultTitle': { ko: 'AI 손금 풀이', en: 'AI Palm Reading' },
+  'palm.disclaimer': { ko: '본 결과는 전통 손금 풀이 스타일을 재미로 재구성한 AI 콘텐츠이며, 의학적·과학적 진단이 아닙니다.', en: 'This is AI-generated content styled after traditional palmistry for entertainment only, not a medical or scientific diagnosis.' },
+  'face.captureTitle': { ko: '얼굴 촬영', en: 'Take a Face Photo' },
+  'face.captureDesc': { ko: '정면을 바라보고 얼굴 전체가 나오도록 밝은 곳에서 촬영해 주세요. 촬영한 사진은 AI 분석에만 사용되며 서버에 저장되지 않습니다.', en: 'Look straight ahead and take a photo in good light so your whole face is visible. Your photo is used only for AI analysis and is never stored on our server.' },
+  'face.analyze': { ko: 'AI 관상 분석하기', en: 'Analyze My Face with AI' },
+  'face.resultTitle': { ko: 'AI 관상 총평', en: 'AI Face Reading' },
+  'face.disclaimer': { ko: '본 결과는 전통 관상 풀이 스타일을 재미로 재구성한 AI 콘텐츠이며, 외모 평가나 의학적 진단이 아닙니다.', en: 'This is AI-generated content styled after traditional face reading for entertainment only, not an appearance judgment or medical diagnosis.' },
+
+  // Errors / dynamic messages
+  'err.nameRequired': { ko: '이름을 입력해 주세요.', en: 'Please enter your name.' },
+  'err.phoneInvalid': { ko: '전화번호를 정확히 입력해 주세요. (10~11자리 숫자)', en: 'Please enter a valid phone number. (10-11 digits)' },
+  'err.phoneInvalid2': { ko: '전화번호를 정확히 입력해 주세요.', en: 'Please enter a valid phone number.' },
+  'err.passwordInvalid': { ko: '비밀번호는 영문, 숫자, 특수문자를 포함해 8자 이상이어야 합니다.', en: 'Password must include letters, numbers, and symbols, at least 8 characters.' },
+  'err.passwordMismatch': { ko: '비밀번호가 일치하지 않습니다.', en: 'Passwords do not match.' },
+  'err.phoneAlreadyUsed': { ko: '이미 가입된 전화번호입니다. 로그인해 주세요.', en: 'This phone number is already registered. Please log in.' },
+  'err.loginFailed': { ko: '전화번호 또는 비밀번호가 올바르지 않습니다.', en: 'Incorrect phone number or password.' },
+  'err.resetNotFound': { ko: '일치하는 회원 정보를 찾을 수 없습니다. 이름과 전화번호를 다시 확인해 주세요.', en: 'No matching account found. Please check your name and phone number again.' },
+  'err.resetVerifyFirst': { ko: '본인 확인을 먼저 진행해 주세요.', en: 'Please verify your identity first.' },
+  'err.resetUserNotFound': { ko: '회원 정보를 찾을 수 없습니다.', en: 'Account not found.' },
+  'msg.passwordChanged': { ko: '비밀번호가 변경되었습니다. 새 비밀번호로 로그인해 주세요.', en: 'Your password has been changed. Please log in with your new password.' },
+  'err.generic': { ko: '오류가 발생했습니다: ', en: 'An error occurred: ' },
+  'err.birthRequired': { ko: '생년월일을 선택해 주세요.', en: 'Please select your date of birth.' },
+  'err.lunarInvalid': { ko: '입력하신 음력 날짜가 올바르지 않습니다. 연도(1900~2100)와 윤달 여부를 확인해 주세요.', en: 'The lunar date entered is invalid. Please check the year (1900-2100) and leap month setting.' },
+  'err.imageOnly': { ko: '이미지 파일만 업로드할 수 있어요.', en: 'Only image files can be uploaded.' },
+  'err.photoLoadFailed': { ko: '사진을 불러오는 데 실패했습니다. 다시 시도해 주세요.', en: 'Failed to load the photo. Please try again.' },
+  'err.selectPhotoFirst': { ko: '먼저 사진을 촬영하거나 선택해 주세요.', en: 'Please take or select a photo first.' },
+  'msg.analyzing': { ko: 'AI가 분석 중이에요...', en: 'AI is analyzing...' },
+  'err.analyzeFailed': { ko: 'AI 분석에 실패했습니다: ', en: 'AI analysis failed: ' },
+  'err.serverResponse': { ko: '서버 응답 오류 (', en: 'Server error (' },
+  'err.noAiResult': { ko: 'AI로부터 결과를 받지 못했습니다.', en: 'No result received from the AI.' },
+  'msg.loadingFortune': { ko: '오늘의 운세를 불러오는 중이에요...', en: "Loading today's fortune..." },
+  'birth.hourUnknown': { ko: '태어난 시각 모름', en: 'Unknown birth time' },
+  'birth.timeUnknown': { ko: '시간 미상', en: 'time unknown' },
+  'birth.solarLine': { ko: '양력 {y}년 {m}월 {d}일 · {hour} 생', en: '{hour} on {m}/{d}/{y} (Solar)' },
+  'birth.lunarLine': { ko: '음력 {y}년 {leap}{m}월 {d}일 · {hour} 생 (양력 {sy}년 {sm}월 {sd}일 기준으로 계산)', en: '{hour} on {m}/{d}/{y} (Lunar{leap}) — calculated as {sm}/{sd}/{sy} solar' },
+  'birth.leapTag': { ko: '(윤달) ', en: ', leap month' },
+  'saju.year': { ko: '태어난 해', en: 'Year' },
+  'saju.month': { ko: '태어난 달', en: 'Month' },
+  'saju.day': { ko: '태어난 날', en: 'Day' },
+  'saju.hour': { ko: '태어난 시', en: 'Hour' },
+  'saju.yearPillar': { ko: '년주', en: 'Year Pillar' },
+  'saju.monthPillar': { ko: '월주', en: 'Month Pillar' },
+  'saju.dayPillar': { ko: '일주', en: 'Day Pillar' },
+  'saju.hourPillar': { ko: '시주', en: 'Hour Pillar' },
+  'saju.unknown': { ko: '미상', en: 'Unknown' },
+  'saju.summary': {
+    ko: "당신을 대표하는 글자는 '{dayGZ}'이에요. 여기에 태어난 해의 기운 '{yearGZ}', 태어난 달의 기운 '{monthGZ}'{hourPart}가 더해져 총 네 가지 기운이 당신만의 사주를 이루고, 오늘의 행운 기운도 여기서 만들어져요.",
+    en: "The character that represents you is '{dayGZ}'. Together with the energy of your birth year '{yearGZ}', birth month '{monthGZ}'{hourPart}, these four pillars form your unique Saju — and today's lucky energy is drawn from them too."
+  },
+  'saju.summary.hourPart': { ko: ", 태어난 시의 기운 '{hourGZ}'", en: ", and birth hour '{hourGZ}'" },
+  'leapHint.has': { ko: '{y}년(음력)에는 윤{lm}월이 있습니다. 윤달에 태어나셨다면 체크해 주세요.', en: 'The lunar year {y} has a leap month {lm}. If you were born in the leap month, please check the box.' },
+  'leapHint.none': { ko: '{y}년(음력)에는 윤달이 없습니다.', en: 'The lunar year {y} has no leap month.' },
+};
+
+let currentLang = 'ko';
+
+function t(key, vars){
+  const entry = TRANSLATIONS[key];
+  let text = entry ? (entry[currentLang] || entry.ko) : key;
+  if(vars){
+    Object.keys(vars).forEach(k=>{ text = text.replace(new RegExp('\\{'+k+'\\}','g'), vars[k]); });
+  }
+  return text;
+}
+
+function applyTranslations(){
+  document.documentElement.lang = currentLang;
+  document.title = currentLang === 'en' ? 'Saju Fortune · Myeongni-based Lucky Numbers' : '사주행운 · 명리 기반 행운번호';
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    el.innerHTML = t(el.getAttribute('data-i18n'));
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el=>{
+    el.setAttribute('placeholder', t(el.getAttribute('data-i18n-placeholder')));
+  });
+  document.getElementById('lang-ko-btn').classList.toggle('active', currentLang==='ko');
+  document.getElementById('lang-en-btn').classList.toggle('active', currentLang==='en');
+}
+
+function setLang(lang){
+  currentLang = lang;
+  try{ localStorage.setItem(LS_PREFIX_LANG, lang); }catch(e){}
+  applyTranslations();
+  // Re-render anything currently on screen that has dynamic, language-dependent text.
+  fillBirthSelects();
+  if(currentUser && currentUser.birth && currentUser.saju && !document.getElementById('screen-result').classList.contains('hidden')){
+    renderResult();
+  }
+  refreshLeapHintGlobal && refreshLeapHintGlobal();
+}
+
 /* ---------------- storage helpers (browser localStorage, works standalone) ---------------- */
 const LS_PREFIX = 'sajuapp_';
+const LS_PREFIX_LANG = LS_PREFIX + 'lang';
 async function saveUser(user){
   try{
     localStorage.setItem(LS_PREFIX+'user:'+user.phone, JSON.stringify(user));
@@ -788,14 +981,14 @@ async function handleSignup(){
   const errEl = document.getElementById('su-err');
   errEl.textContent='';
 
-  if(!name){ errEl.textContent='이름을 입력해 주세요.'; return; }
-  if(!isValidPhone(phoneRaw)){ errEl.textContent='전화번호를 정확히 입력해 주세요. (10~11자리 숫자)'; return; }
-  if(!isValidPassword(pw)){ errEl.textContent='비밀번호는 영문, 숫자, 특수문자를 포함해 8자 이상이어야 합니다.'; return; }
-  if(pw!==pw2){ errEl.textContent='비밀번호가 일치하지 않습니다.'; return; }
+  if(!name){ errEl.textContent=t('err.nameRequired'); return; }
+  if(!isValidPhone(phoneRaw)){ errEl.textContent=t('err.phoneInvalid'); return; }
+  if(!isValidPassword(pw)){ errEl.textContent=t('err.passwordInvalid'); return; }
+  if(pw!==pw2){ errEl.textContent=t('err.passwordMismatch'); return; }
 
   const phone = normalizePhone(phoneRaw);
   const existing = await loadUser(phone);
-  if(existing){ errEl.textContent='이미 가입된 전화번호입니다. 로그인해 주세요.'; return; }
+  if(existing){ errEl.textContent=t('err.phoneAlreadyUsed'); return; }
 
   const user = { name, phone, password: pw, birth:null, saju:null, lucky:null, sets:null };
   await saveUser(user);
@@ -804,7 +997,7 @@ async function handleSignup(){
   await enterAfterAuth();
  }catch(e){
    console.error(e);
-   document.getElementById('su-err').textContent = '오류가 발생했습니다: ' + e.message;
+   document.getElementById('su-err').textContent = t('err.generic') + e.message;
  }
 }
 
@@ -814,10 +1007,10 @@ async function handleLogin(){
   const errEl = document.getElementById('li-err');
   errEl.textContent='';
 
-  if(!isValidPhone(phoneRaw)){ errEl.textContent='전화번호를 정확히 입력해 주세요.'; return; }
+  if(!isValidPhone(phoneRaw)){ errEl.textContent=t('err.phoneInvalid2'); return; }
   const phone = normalizePhone(phoneRaw);
   const user = await loadUser(phone);
-  if(!user || user.password!==pw){ errEl.textContent='전화번호 또는 비밀번호가 올바르지 않습니다.'; return; }
+  if(!user || user.password!==pw){ errEl.textContent=t('err.loginFailed'); return; }
 
   await setSession(phone);
   currentUser = user;
@@ -860,13 +1053,13 @@ async function handleResetVerify(){
   const errEl = document.getElementById('rs-err');
   errEl.textContent='';
 
-  if(!name){ errEl.textContent='이름을 입력해 주세요.'; return; }
-  if(!isValidPhone(phoneRaw)){ errEl.textContent='전화번호를 정확히 입력해 주세요.'; return; }
+  if(!name){ errEl.textContent=t('err.nameRequired'); return; }
+  if(!isValidPhone(phoneRaw)){ errEl.textContent=t('err.phoneInvalid2'); return; }
 
   const phone = normalizePhone(phoneRaw);
   const user = await loadUser(phone);
   if(!user || user.name !== name){
-    errEl.textContent = '일치하는 회원 정보를 찾을 수 없습니다. 이름과 전화번호를 다시 확인해 주세요.';
+    errEl.textContent = t('err.resetNotFound');
     return;
   }
 
@@ -881,22 +1074,22 @@ async function handleResetVerify(){
 async function handleResetSave(){
   const errEl = document.getElementById('rs-err');
   errEl.textContent='';
-  if(!resetVerifiedPhone){ errEl.textContent='본인 확인을 먼저 진행해 주세요.'; return; }
+  if(!resetVerifiedPhone){ errEl.textContent=t('err.resetVerifyFirst'); return; }
 
   const pw = document.getElementById('rs-pw').value;
   const pw2 = document.getElementById('rs-pw2').value;
-  if(!isValidPassword(pw)){ errEl.textContent='비밀번호는 영문, 숫자, 특수문자를 포함해 8자 이상이어야 합니다.'; return; }
-  if(pw!==pw2){ errEl.textContent='비밀번호가 일치하지 않습니다.'; return; }
+  if(!isValidPassword(pw)){ errEl.textContent=t('err.passwordInvalid'); return; }
+  if(pw!==pw2){ errEl.textContent=t('err.passwordMismatch'); return; }
 
   const user = await loadUser(resetVerifiedPhone);
-  if(!user){ errEl.textContent='회원 정보를 찾을 수 없습니다.'; return; }
+  if(!user){ errEl.textContent=t('err.resetUserNotFound'); return; }
 
   user.password = pw;
   await saveUser(user);
 
   resetPasswordResetScreen();
   showScreen('login');
-  document.getElementById('li-err').textContent = '비밀번호가 변경되었습니다. 새 비밀번호로 로그인해 주세요.';
+  document.getElementById('li-err').textContent = t('msg.passwordChanged');
 }
 
 async function enterAfterAuth(){
@@ -939,11 +1132,27 @@ function refreshLeapHint(){
   if(!y || y<1900 || y>2100){ hintEl.textContent=''; return; }
   const lm = leapMonthOf(y);
   hintEl.textContent = lm>0
-    ? `${y}년(음력)에는 윤${lm}월이 있습니다. 윤달에 태어나셨다면 체크해 주세요.`
-    : `${y}년(음력)에는 윤달이 없습니다.`;
+    ? t('leapHint.has', {y, lm})
+    : t('leapHint.none', {y});
 }
+let refreshLeapHintGlobal = refreshLeapHint;
 
 let refreshDaysGlobal = function(){};
+
+const HOUR_BRANCH_INFO = [
+  { ko:'자시', en:'Hour of the Rat',     range:'23:00~01:00' },
+  { ko:'축시', en:'Hour of the Ox',      range:'01:00~03:00' },
+  { ko:'인시', en:'Hour of the Tiger',   range:'03:00~05:00' },
+  { ko:'묘시', en:'Hour of the Rabbit',  range:'05:00~07:00' },
+  { ko:'진시', en:'Hour of the Dragon',  range:'07:00~09:00' },
+  { ko:'사시', en:'Hour of the Snake',   range:'09:00~11:00' },
+  { ko:'오시', en:'Hour of the Horse',   range:'11:00~13:00' },
+  { ko:'미시', en:'Hour of the Goat',    range:'13:00~15:00' },
+  { ko:'신시', en:'Hour of the Monkey',  range:'15:00~17:00' },
+  { ko:'유시', en:'Hour of the Rooster', range:'17:00~19:00' },
+  { ko:'술시', en:'Hour of the Dog',     range:'19:00~21:00' },
+  { ko:'해시', en:'Hour of the Pig',     range:'21:00~23:00' },
+];
 
 function fillBirthSelects(){
   const yearSel = document.getElementById('b-year');
@@ -952,14 +1161,24 @@ function fillBirthSelects(){
   const hourSel = document.getElementById('b-hour');
   const leapChk = document.getElementById('b-leap');
 
+  // Preserve current selections (this function is also re-run on language switch).
+  const prevY = yearSel.value, prevM = monthSel.value, prevH = hourSel.value;
+
   const nowYear = new Date().getFullYear();
   let yOpts = '';
-  for(let y=nowYear; y>=Math.max(1900,nowYear-100); y--){ yOpts += `<option value="${y}">${y}년</option>`; }
+  for(let y=nowYear; y>=Math.max(1900,nowYear-100); y--){
+    yOpts += currentLang==='en' ? `<option value="${y}">${y}</option>` : `<option value="${y}">${y}년</option>`;
+  }
   yearSel.innerHTML = yOpts;
+  if(prevY) yearSel.value = prevY;
 
+  const monthNamesEn = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   let mOpts='';
-  for(let m=1;m<=12;m++){ mOpts += `<option value="${m}">${m}월</option>`; }
+  for(let m=1;m<=12;m++){
+    mOpts += currentLang==='en' ? `<option value="${m}">${monthNamesEn[m-1]}</option>` : `<option value="${m}">${m}월</option>`;
+  }
   monthSel.innerHTML = mOpts;
+  if(prevM) monthSel.value = prevM;
 
   function refreshDays(){
     const y = parseInt(yearSel.value), m = parseInt(monthSel.value);
@@ -972,7 +1191,9 @@ function fillBirthSelects(){
       days = new Date(y, m, 0).getDate();
     }
     let dOpts='';
-    for(let d=1; d<=days; d++){ dOpts += `<option value="${d}">${d}일</option>`; }
+    for(let d=1; d<=days; d++){
+      dOpts += currentLang==='en' ? `<option value="${d}">${d}</option>` : `<option value="${d}">${d}일</option>`;
+    }
     const prev = daySel.value;
     daySel.innerHTML = dOpts;
     if(prev && parseInt(prev)<=days) daySel.value = prev;
@@ -984,15 +1205,13 @@ function fillBirthSelects(){
   leapChk.onchange = refreshDays;
   refreshDays();
 
-  const hourLabels = [
-    ['0','자시 (23:00~01:00)'],['1','축시 (01:00~03:00)'],['2','인시 (03:00~05:00)'],
-    ['3','묘시 (05:00~07:00)'],['4','진시 (07:00~09:00)'],['5','사시 (09:00~11:00)'],
-    ['6','오시 (11:00~13:00)'],['7','미시 (13:00~15:00)'],['8','신시 (15:00~17:00)'],
-    ['9','유시 (17:00~19:00)'],['10','술시 (19:00~21:00)'],['11','해시 (21:00~23:00)']
-  ];
-  let hOpts = '<option value="unknown">태어난 시각 모름</option>';
-  hourLabels.forEach(([v,l])=>{ hOpts += `<option value="${v}">${l}</option>`; });
+  let hOpts = `<option value="unknown">${t('birth.hourUnknown')}</option>`;
+  HOUR_BRANCH_INFO.forEach((info, idx)=>{
+    const label = currentLang==='en' ? info.en : info.ko;
+    hOpts += `<option value="${idx}">${label} (${info.range})</option>`;
+  });
   hourSel.innerHTML = hOpts;
+  if(prevH) hourSel.value = prevH;
 }
 
 /* ---------------- lunar(음력) <-> solar(양력) conversion, 1900-2100 ---------------- */
@@ -1172,9 +1391,20 @@ function generateLucky(seedStr){
 const STEM_ELEMENT = {
   '갑':'목','을':'목','병':'화','정':'화','무':'토','기':'토','경':'금','신':'금','임':'수','계':'수'
 };
-const ELEMENT_LABEL = { '목':'목(木)', '화':'화(火)', '토':'토(土)', '금':'금(金)', '수':'수(水)' };
+const ELEMENT_LABEL_KO = { '목':'목(木)', '화':'화(火)', '토':'토(土)', '금':'금(金)', '수':'수(水)' };
+const ELEMENT_LABEL_EN = { '목':'Wood (木)', '화':'Fire (火)', '토':'Earth (土)', '금':'Metal (金)', '수':'Water (水)' };
+function elementLabel(el){ return currentLang==='en' ? ELEMENT_LABEL_EN[el] : ELEMENT_LABEL_KO[el]; }
 
-const FORTUNE_CATEGORY_LABEL = { work:'사업·일운', money:'금전운', love:'연애운', health:'건강운' };
+// Romanized forms of the Heavenly Stems / Earthly Branches, shown in English mode
+// alongside the Hanja glyphs (the Korean readings are traditional terms and are kept
+// as the underlying data; only the display changes by language).
+const STEM_ROMAN = { '갑':'Gap','을':'Eul','병':'Byeong','정':'Jeong','무':'Mu','기':'Gi','경':'Gyeong','신':'Sin','임':'Im','계':'Gye' };
+const BRANCH_ROMAN = { '자':'Ja','축':'Chuk','인':'In','묘':'Myo','진':'Jin','사':'Sa','오':'O','미':'Mi','신':'Sin','유':'Yu','술':'Sul','해':'Hae' };
+function romanizePillar(p){ return currentLang==='en' ? `${STEM_ROMAN[p.stem]} ${BRANCH_ROMAN[p.branch]}` : `${p.stem}${p.branch}`; }
+
+const FORTUNE_CATEGORY_LABEL_KO = { work:'사업·일운', money:'금전운', love:'연애운', health:'건강운' };
+const FORTUNE_CATEGORY_LABEL_EN = { work:'Career', money:'Money', love:'Love', health:'Wellness' };
+function fortuneCategoryLabel(cat){ return currentLang==='en' ? FORTUNE_CATEGORY_LABEL_EN[cat] : FORTUNE_CATEGORY_LABEL_KO[cat]; }
 const FORTUNE_CATEGORY_ICON = { work:'💼', money:'💰', love:'💕', health:'🌿' };
 
 const FORTUNE_TEXTS = {
@@ -1292,17 +1522,29 @@ const FORTUNE_TEXTS = {
 
 const FORTUNE_CATEGORIES = ['work','money','love','health'];
 
+const FALLBACK_FORTUNE_EN = {
+  work: "It's a good day to take one small, concrete step on something you've been putting off.",
+  money: 'Keep an eye on your spending today — a little planning goes a long way.',
+  love: 'Openness and honest conversation bring you closer to the people who matter.',
+  health: 'Give yourself a proper break today; a little rest goes further than pushing through.'
+};
+
 // Local, deterministic fallback used only if the AI call fails (offline, server error, etc.)
-// so the screen still shows something instead of breaking.
+// so the screen still shows something instead of breaking. In English mode we use a
+// simple generic message per category rather than machine-translating the Korean set.
 function getFallbackFortune(user, element, dayStem, todayKey){
-  const items = FORTUNE_CATEGORIES.map(cat=>{
+  if(currentLang==='en'){
+    return FORTUNE_CATEGORIES.map(cat=>({
+      category: cat, label: fortuneCategoryLabel(cat), icon: FORTUNE_CATEGORY_ICON[cat], text: FALLBACK_FORTUNE_EN[cat]
+    }));
+  }
+  return FORTUNE_CATEGORIES.map(cat=>{
     const seed = hashSeed(`${user.phone}-${dayStem}-${todayKey}-${cat}`);
     const rand = mulberry32(seed);
     const arr = FORTUNE_TEXTS[element][cat];
     const text = arr[Math.floor(rand()*arr.length)];
-    return { category: cat, label: FORTUNE_CATEGORY_LABEL[cat], icon: FORTUNE_CATEGORY_ICON[cat], text };
+    return { category: cat, label: fortuneCategoryLabel(cat), icon: FORTUNE_CATEGORY_ICON[cat], text };
   });
-  return items;
 }
 
 const FORTUNE_ENDPOINT = '/api/fortune';
@@ -1312,10 +1554,13 @@ async function getTodaysFortune(user){
   const element = STEM_ELEMENT[dayStem] || '토';
   const now = new Date();
   const todayKey = getTodayKey();
-  const dateLabel = `${now.getFullYear()}년 ${now.getMonth()+1}월 ${now.getDate()}일 기준 · 오늘의 기운 '${ELEMENT_LABEL[element]}(${dayStem})'`;
+  const dateLabel = currentLang==='en'
+    ? `As of ${now.getMonth()+1}/${now.getDate()}/${now.getFullYear()} · Today's energy: ${elementLabel(element)}`
+    : `${now.getFullYear()}년 ${now.getMonth()+1}월 ${now.getDate()}일 기준 · 오늘의 기운 '${elementLabel(element)}(${dayStem})'`;
 
-  // Same-day cache: avoid calling the AI again if we already generated today's fortune.
-  if(user.fortune && user.fortuneDate === todayKey){
+  // Same-day, same-language cache: avoid calling the AI again if we already generated
+  // today's fortune in the language currently selected.
+  if(user.fortune && user.fortuneDate === todayKey && user.fortuneLang === currentLang){
     return { element, items: user.fortune, dateLabel };
   }
 
@@ -1327,7 +1572,8 @@ async function getTodaysFortune(user){
     monthStem: saju.month.stem, monthBranch: saju.month.branch,
     hourStem: saju.hour ? saju.hour.stem : null,
     hourBranch: saju.hour ? saju.hour.branch : null,
-    dateLabel
+    dateLabel,
+    lang: currentLang
   };
 
   let items;
@@ -1339,12 +1585,12 @@ async function getTodaysFortune(user){
     });
     const data = await response.json().catch(()=>null);
     if(!response.ok || !data || !Array.isArray(data.items)){
-      throw new Error((data && data.error) || ('서버 응답 오류 (' + response.status + ')'));
+      throw new Error((data && data.error) || (t('err.serverResponse') + response.status + ')'));
     }
     items = FORTUNE_CATEGORIES.map(cat=>{
       const found = data.items.find(it=>it.category===cat);
       const text = (found && found.text) ? found.text : getFallbackFortune(user, element, dayStem, todayKey).find(f=>f.category===cat).text;
-      return { category: cat, label: FORTUNE_CATEGORY_LABEL[cat], icon: FORTUNE_CATEGORY_ICON[cat], text };
+      return { category: cat, label: fortuneCategoryLabel(cat), icon: FORTUNE_CATEGORY_ICON[cat], text };
     });
   }catch(e){
     console.error('오늘의 운세 생성 실패, 기본 문구로 대체합니다:', e);
@@ -1353,6 +1599,7 @@ async function getTodaysFortune(user){
 
   user.fortune = items;
   user.fortuneDate = todayKey;
+  user.fortuneLang = currentLang;
   await saveUser(user);
 
   return { element, items, dateLabel };
@@ -1366,13 +1613,13 @@ async function handleBirthSubmit(){
   const errEl = document.getElementById('b-err');
   errEl.textContent='';
 
-  if(!y||!m||!d){ errEl.textContent='생년월일을 선택해 주세요.'; return; }
+  if(!y||!m||!d){ errEl.textContent=t('err.birthRequired'); return; }
 
   let solar = {y,m,d};
   if(calendarType==='lunar'){
     const converted = lunarToSolar(y,m,d,isLeap);
     if(!converted){
-      errEl.textContent = '입력하신 음력 날짜가 올바르지 않습니다. 연도(1900~2100)와 윤달 여부를 확인해 주세요.';
+      errEl.textContent = t('err.lunarInvalid');
       return;
     }
     solar = converted;
@@ -1402,42 +1649,46 @@ async function handleBirthSubmit(){
 async function renderResult(){
   const birth = currentUser.birth;
   const {y,m,d,hourVal} = birth;
-  const hourText = hourVal==='unknown' ? '시간 미상' :
-    ['자시','축시','인시','묘시','진시','사시','오시','미시','신시','유시','술시','해시'][parseInt(hourVal)];
+  const hourText = hourVal==='unknown'
+    ? t('birth.timeUnknown')
+    : (currentLang==='en' ? HOUR_BRANCH_INFO[parseInt(hourVal)].en : HOUR_BRANCH_INFO[parseInt(hourVal)].ko);
 
   let birthDesc;
   if(birth.calendarType==='lunar'){
-    const leapTag = birth.isLeap ? '(윤달) ' : '';
-    birthDesc = `음력 ${birth.inputY}년 ${leapTag}${birth.inputM}월 ${birth.inputD}일 · ${hourText} 생 (양력 ${y}년 ${m}월 ${d}일 기준으로 계산)`;
+    const leapTag = birth.isLeap ? t('birth.leapTag') : '';
+    birthDesc = t('birth.lunarLine', { y: birth.inputY, leap: leapTag, m: birth.inputM, d: birth.inputD, hour: hourText, sy: y, sm: m, sd: d });
   } else {
-    birthDesc = `양력 ${y}년 ${m}월 ${d}일 · ${hourText} 생`;
+    birthDesc = t('birth.solarLine', { y, m, d, hour: hourText });
   }
   document.getElementById('result-birth-desc').textContent = birthDesc;
 
   const saju = currentUser.saju;
   const pillarsWrap = document.getElementById('pillars-wrap');
   const order = [
-    ['태어난 해', '년주', saju.year],
-    ['태어난 달', '월주', saju.month],
-    ['태어난 날', '일주', saju.day],
-    ['태어난 시', '시주', saju.hour],
+    [t('saju.year'), t('saju.yearPillar'), saju.year],
+    [t('saju.month'), t('saju.monthPillar'), saju.month],
+    [t('saju.day'), t('saju.dayPillar'), saju.day],
+    [t('saju.hour'), t('saju.hourPillar'), saju.hour],
   ];
   pillarsWrap.innerHTML = order.map(([sub,label,p])=>{
     if(!p){
-      return `<div class="pillar"><div class="label">${sub}</div><div class="glyphs" style="color:var(--muted);font-size:14px;">미상</div></div>`;
+      return `<div class="pillar"><div class="label">${sub}</div><div class="glyphs" style="color:var(--muted);font-size:14px;">${t('saju.unknown')}</div></div>`;
     }
     return `<div class="pillar">
       <div class="label">${sub}</div>
       <div class="glyphs">${p.stemHanja}${p.branchHanja}</div>
-      <div class="romanized">${p.stem}${p.branch} (${label})</div>
+      <div class="romanized">${romanizePillar(p)} (${label})</div>
     </div>`;
   }).join('');
 
   const dayStem = saju.day.stem;
-  document.getElementById('saju-summary').textContent =
-    `당신을 대표하는 글자는 '${dayStem}'이에요. 여기에 태어난 해의 기운 '${saju.year.stem}${saju.year.branch}', 태어난 달의 기운 '${saju.month.stem}${saju.month.branch}'` +
-    (saju.hour ? `, 태어난 시의 기운 '${saju.hour.stem}${saju.hour.branch}'` : '') +
-    `가 더해져 총 네 가지 기운이 당신만의 사주를 이루고, 오늘의 행운 기운도 여기서 만들어져요.`;
+  const hourPart = saju.hour ? t('saju.summary.hourPart', { hourGZ: romanizePillar(saju.hour) }) : '';
+  document.getElementById('saju-summary').textContent = t('saju.summary', {
+    dayGZ: currentLang==='en' ? STEM_ROMAN[dayStem] : dayStem,
+    yearGZ: romanizePillar(saju.year),
+    monthGZ: romanizePillar(saju.month),
+    hourPart
+  });
 
   // Lucky numbers refresh once per day: if we last generated them on a
   // previous day, re-roll with today's date baked into the seed and persist.
@@ -1463,12 +1714,13 @@ async function renderResult(){
   // lightweight loading state first instead of leaving the section blank.
   document.getElementById('fortune-tag-wrap').innerHTML = '';
   document.getElementById('fortune-items').innerHTML =
-    `<div class="fortune-item"><div class="fortune-item-text">오늘의 운세를 불러오는 중이에요...</div></div>`;
+    `<div class="fortune-item"><div class="fortune-item-text">${t('msg.loadingFortune')}</div></div>`;
   document.getElementById('fortune-date').textContent = '';
 
   const fortune = await getTodaysFortune(currentUser);
+  const fortuneTagText = currentLang==='en' ? `Today's Energy · ${elementLabel(fortune.element)}` : `오늘의 기운 · ${elementLabel(fortune.element)}`;
   document.getElementById('fortune-tag-wrap').innerHTML =
-    `<span class="fortune-tag">오늘의 기운 · ${ELEMENT_LABEL[fortune.element]}</span>`;
+    `<span class="fortune-tag">${fortuneTagText}</span>`;
   document.getElementById('fortune-items').innerHTML = fortune.items.map(item=>`
     <div class="fortune-item">
       <div class="fortune-item-label">${item.icon} ${item.label}</div>
@@ -1489,8 +1741,8 @@ function resetPhotoScreen(type){
   document.getElementById(type+'-file-input').value = '';
   const frame = document.getElementById(type+'-photo-frame');
   frame.innerHTML = type==='palm'
-    ? '<span class="photo-placeholder">✋<br>사진 없음</span>'
-    : '<span class="photo-placeholder">👤<br>사진 없음</span>';
+    ? `<span class="photo-placeholder">${t('photo.none')}</span>`
+    : `<span class="photo-placeholder">${t('photo.none2')}</span>`;
   document.getElementById(type+'-analyze-btn').style.display = 'none';
   document.getElementById(type+'-err').textContent = '';
   document.getElementById(type+'-result-card').classList.add('hidden');
@@ -1503,7 +1755,7 @@ function onPhotoSelected(type){
   const file = input.files && input.files[0];
   if(!file) return;
   if(!file.type.startsWith('image/')){
-    errEl.textContent = '이미지 파일만 업로드할 수 있어요.';
+    errEl.textContent = t('err.imageOnly');
     return;
   }
   const reader = new FileReader();
@@ -1513,13 +1765,14 @@ function onPhotoSelected(type){
     const mediaType = header.match(/data:(.*);base64/)[1];
     photoState[type] = { base64, mediaType };
 
+    const altText = type==='palm' ? (currentLang==='en' ? 'Palm photo' : '손금 사진') : (currentLang==='en' ? 'Face photo' : '얼굴 사진');
     const frame = document.getElementById(type+'-photo-frame');
-    frame.innerHTML = `<img src="${dataUrl}" alt="${type==='palm'?'손금 사진':'얼굴 사진'}">`;
+    frame.innerHTML = `<img src="${dataUrl}" alt="${altText}">`;
     document.getElementById(type+'-analyze-btn').style.display = 'block';
     document.getElementById(type+'-result-card').classList.add('hidden');
   };
   reader.onerror = function(){
-    errEl.textContent = '사진을 불러오는 데 실패했습니다. 다시 시도해 주세요.';
+    errEl.textContent = t('err.photoLoadFailed');
   };
   reader.readAsDataURL(file);
 }
@@ -1532,13 +1785,13 @@ async function callBackendAnalyze(type, base64, mediaType){
   const response = await fetch(ANALYZE_ENDPOINT, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ type, base64, mediaType })
+    body: JSON.stringify({ type, base64, mediaType, lang: currentLang })
   });
   const data = await response.json().catch(()=>null);
   if(!response.ok){
-    throw new Error((data && data.error) || ('서버 응답 오류 (' + response.status + ')'));
+    throw new Error((data && data.error) || (t('err.serverResponse') + response.status + ')'));
   }
-  if(!data || !data.result){ throw new Error('AI로부터 결과를 받지 못했습니다.'); }
+  if(!data || !data.result){ throw new Error(t('err.noAiResult')); }
   return data.result;
 }
 
@@ -1548,19 +1801,19 @@ async function analyzePhoto(type){
   const btn = document.getElementById(type+'-analyze-btn');
   errEl.textContent = '';
   if(!state.base64){
-    errEl.textContent = '먼저 사진을 촬영하거나 선택해 주세요.';
+    errEl.textContent = t('err.selectPhotoFirst');
     return;
   }
   const originalLabel = btn.textContent;
   btn.disabled = true;
-  btn.textContent = 'AI가 분석 중이에요...';
+  btn.textContent = t('msg.analyzing');
   try{
     const resultText = await callBackendAnalyze(type, state.base64, state.mediaType);
     document.getElementById(type+'-result-text').textContent = resultText;
     document.getElementById(type+'-result-card').classList.remove('hidden');
   }catch(e){
     console.error(e);
-    errEl.textContent = 'AI 분석에 실패했습니다: ' + e.message;
+    errEl.textContent = t('err.analyzeFailed') + e.message;
   }finally{
     btn.disabled = false;
     btn.textContent = originalLabel;
@@ -1579,6 +1832,11 @@ if ('serviceWorker' in navigator) {
 }
 
 async function boot(){
+  try{
+    const savedLang = localStorage.getItem(LS_PREFIX_LANG);
+    if(savedLang==='en' || savedLang==='ko') currentLang = savedLang;
+  }catch(e){}
+  applyTranslations();
   fillBirthSelects();
   const session = await getSession();
   if(session && session.phone){
