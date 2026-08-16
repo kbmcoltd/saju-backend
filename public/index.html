@@ -118,6 +118,18 @@
   .card-light .fortune-date{ color:#7a7886; }
   .card-light .disclaimer{ color:#8a8794; border-top-color:rgba(0,0,0,.1); }
   .card-light .saju-summary{ color:#e9e2cf; }
+  .card-light label{ color:#6c6a78; }
+  .card-light input[type=text], .card-light input[type=password], .card-light input[type=tel], .card-light select{
+    background:#f7f9fc;
+    border:1px solid rgba(44,42,58,.16);
+    color:#2c2a3a;
+  }
+  .card-light input::placeholder{ color:#a9a6b3; }
+  .card-light input:focus, .card-light select:focus{ border-color:var(--gold); }
+  .card-light .hint{ color:#8a8794; }
+  .card-light .leap-row{ background:#f7f9fc; border-color:rgba(44,42,58,.16); }
+  .card-light .leap-check{ color:#2c2a3a; }
+  .card-light .cal-toggle-btn{ background:#f7f9fc; border-color:rgba(44,42,58,.16); color:#6c6a78; }
   .card .desc{
     font-size:12.5px;
     color:var(--muted);
@@ -503,7 +515,7 @@
 
   <!-- SIGNUP -->
   <div id="screen-signup" class="screen">
-    <div class="card">
+    <div class="card card-light">
       <h2 data-i18n="signup.title">회원가입</h2>
       <p class="desc" data-i18n="signup.desc">이름과 전화번호, 비밀번호를 입력해 주세요. 전화번호가 아이디가 됩니다.</p>
 
@@ -529,7 +541,7 @@
 
   <!-- LOGIN -->
   <div id="screen-login" class="screen hidden">
-    <div class="card">
+    <div class="card card-light">
       <h2 data-i18n="login.title">로그인</h2>
       <p class="desc" data-i18n="login.desc">가입하신 전화번호와 비밀번호로 로그인하세요.</p>
 
@@ -549,7 +561,7 @@
 
   <!-- PASSWORD RESET -->
   <div id="screen-reset" class="screen hidden">
-    <div class="card">
+    <div class="card card-light">
       <h2 data-i18n="reset.title">비밀번호 재설정</h2>
       <p class="desc" data-i18n="reset.desc">가입 시 입력하신 이름과 전화번호를 입력해 주세요. 확인되면 새 비밀번호를 설정할 수 있어요.</p>
 
