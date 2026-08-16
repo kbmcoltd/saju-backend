@@ -908,9 +908,9 @@ async function enterAfterAuth(){
   showScreen('home');
 }
 
-function goToSaju(){
+async function goToSaju(){
   if(currentUser.birth && currentUser.saju && currentUser.lucky && currentUser.sets){
-    renderResult();
+    await renderResult();
     showScreen('result');
   } else {
     showScreen('birth');
@@ -1125,6 +1125,19 @@ function mulberry32(a){
   };
 }
 
+function getTodayKey(){
+  const now = new Date();
+  return `${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()}`;
+}
+
+// Lucky numbers are re-seeded with today's date, so they refresh every day
+// while staying deterministic (same result all day, changes at midnight).
+function getLuckySeed(user){
+  const b = user.birth;
+  const saju = user.saju;
+  return `${b.y}-${b.m}-${b.d}-${b.hourVal}-${saju.year.stem}${saju.year.branch}-${saju.day.stem}${saju.day.branch}-${getTodayKey()}`;
+}
+
 function generateLucky(seedStr){
   const rand = mulberry32(hashSeed(seedStr));
   const pool = Array.from({length:45}, (_,i)=>i+1);
@@ -1277,20 +1290,71 @@ const FORTUNE_TEXTS = {
   }
 };
 
-function getTodaysFortune(user){
-  const dayStem = user.saju.day.stem;
-  const element = STEM_ELEMENT[dayStem] || '토';
-  const now = new Date();
-  const todayKey = `${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()}`;
-  const categories = ['work','money','love','health'];
-  const items = categories.map(cat=>{
+const FORTUNE_CATEGORIES = ['work','money','love','health'];
+
+// Local, deterministic fallback used only if the AI call fails (offline, server error, etc.)
+// so the screen still shows something instead of breaking.
+function getFallbackFortune(user, element, dayStem, todayKey){
+  const items = FORTUNE_CATEGORIES.map(cat=>{
     const seed = hashSeed(`${user.phone}-${dayStem}-${todayKey}-${cat}`);
     const rand = mulberry32(seed);
     const arr = FORTUNE_TEXTS[element][cat];
     const text = arr[Math.floor(rand()*arr.length)];
     return { category: cat, label: FORTUNE_CATEGORY_LABEL[cat], icon: FORTUNE_CATEGORY_ICON[cat], text };
   });
-  const dateLabel = `${now.getFullYear()}년 ${now.getMonth()+1}월 ${now.getDate()}일 기준 · 오늘의 기운 '${element}(${dayStem})'`;
+  return items;
+}
+
+const FORTUNE_ENDPOINT = '/api/fortune';
+
+async function getTodaysFortune(user){
+  const dayStem = user.saju.day.stem;
+  const element = STEM_ELEMENT[dayStem] || '토';
+  const now = new Date();
+  const todayKey = getTodayKey();
+  const dateLabel = `${now.getFullYear()}년 ${now.getMonth()+1}월 ${now.getDate()}일 기준 · 오늘의 기운 '${ELEMENT_LABEL[element]}(${dayStem})'`;
+
+  // Same-day cache: avoid calling the AI again if we already generated today's fortune.
+  if(user.fortune && user.fortuneDate === todayKey){
+    return { element, items: user.fortune, dateLabel };
+  }
+
+  const saju = user.saju;
+  const payload = {
+    element,
+    dayStem, dayBranch: saju.day.branch,
+    yearStem: saju.year.stem, yearBranch: saju.year.branch,
+    monthStem: saju.month.stem, monthBranch: saju.month.branch,
+    hourStem: saju.hour ? saju.hour.stem : null,
+    hourBranch: saju.hour ? saju.hour.branch : null,
+    dateLabel
+  };
+
+  let items;
+  try{
+    const response = await fetch(FORTUNE_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await response.json().catch(()=>null);
+    if(!response.ok || !data || !Array.isArray(data.items)){
+      throw new Error((data && data.error) || ('서버 응답 오류 (' + response.status + ')'));
+    }
+    items = FORTUNE_CATEGORIES.map(cat=>{
+      const found = data.items.find(it=>it.category===cat);
+      const text = (found && found.text) ? found.text : getFallbackFortune(user, element, dayStem, todayKey).find(f=>f.category===cat).text;
+      return { category: cat, label: FORTUNE_CATEGORY_LABEL[cat], icon: FORTUNE_CATEGORY_ICON[cat], text };
+    });
+  }catch(e){
+    console.error('오늘의 운세 생성 실패, 기본 문구로 대체합니다:', e);
+    items = getFallbackFortune(user, element, dayStem, todayKey);
+  }
+
+  user.fortune = items;
+  user.fortuneDate = todayKey;
+  await saveUser(user);
+
   return { element, items, dateLabel };
 }
 async function handleBirthSubmit(){
@@ -1315,8 +1379,6 @@ async function handleBirthSubmit(){
   }
 
   const saju = computeSaju(solar.y, solar.m, solar.d, hourVal);
-  const seedStr = `${solar.y}-${solar.m}-${solar.d}-${hourVal}-${saju.year.stem}${saju.year.branch}-${saju.day.stem}${saju.day.branch}`;
-  const {lucky10, sets} = generateLucky(seedStr);
 
   currentUser.birth = {
     calendarType, isLeap,
@@ -1325,16 +1387,19 @@ async function handleBirthSubmit(){
     hourVal
   };
   currentUser.saju = saju;
+
+  const {lucky10, sets} = generateLucky(getLuckySeed(currentUser));
   currentUser.lucky = lucky10;
   currentUser.sets = sets;
+  currentUser.luckyDate = getTodayKey();
   await saveUser(currentUser);
 
-  renderResult();
+  await renderResult();
   showScreen('result');
 }
 
 /* ---------------- render result ---------------- */
-function renderResult(){
+async function renderResult(){
   const birth = currentUser.birth;
   const {y,m,d,hourVal} = birth;
   const hourText = hourVal==='unknown' ? '시간 미상' :
@@ -1374,10 +1439,34 @@ function renderResult(){
     (saju.hour ? `, 태어난 시의 기운 '${saju.hour.stem}${saju.hour.branch}'` : '') +
     `가 더해져 총 네 가지 기운이 당신만의 사주를 이루고, 오늘의 행운 기운도 여기서 만들어져요.`;
 
+  // Lucky numbers refresh once per day: if we last generated them on a
+  // previous day, re-roll with today's date baked into the seed and persist.
+  if(currentUser.luckyDate !== getTodayKey()){
+    const {lucky10, sets} = generateLucky(getLuckySeed(currentUser));
+    currentUser.lucky = lucky10;
+    currentUser.sets = sets;
+    currentUser.luckyDate = getTodayKey();
+    await saveUser(currentUser);
+  }
+
   const luckyWrap = document.getElementById('lucky10-wrap');
   luckyWrap.innerHTML = currentUser.lucky.map(n=>`<div class="ball">${n}</div>`).join('');
 
-  const fortune = getTodaysFortune(currentUser);
+  const setsWrap = document.getElementById('sets-wrap');
+  setsWrap.innerHTML = currentUser.sets.map((set,i)=>{
+    return `<div class="combo-row">
+      <div class="combo-balls">${set.map(n=>`<div class="ball">${n}</div>`).join('')}</div>
+    </div>`;
+  }).join('');
+
+  // Fortune text comes from the AI backend and can take a moment, so show a
+  // lightweight loading state first instead of leaving the section blank.
+  document.getElementById('fortune-tag-wrap').innerHTML = '';
+  document.getElementById('fortune-items').innerHTML =
+    `<div class="fortune-item"><div class="fortune-item-text">오늘의 운세를 불러오는 중이에요...</div></div>`;
+  document.getElementById('fortune-date').textContent = '';
+
+  const fortune = await getTodaysFortune(currentUser);
   document.getElementById('fortune-tag-wrap').innerHTML =
     `<span class="fortune-tag">오늘의 기운 · ${ELEMENT_LABEL[fortune.element]}</span>`;
   document.getElementById('fortune-items').innerHTML = fortune.items.map(item=>`
@@ -1387,13 +1476,6 @@ function renderResult(){
     </div>
   `).join('');
   document.getElementById('fortune-date').textContent = fortune.dateLabel;
-
-  const setsWrap = document.getElementById('sets-wrap');
-  setsWrap.innerHTML = currentUser.sets.map((set,i)=>{
-    return `<div class="combo-row">
-      <div class="combo-balls">${set.map(n=>`<div class="ball">${n}</div>`).join('')}</div>
-    </div>`;
-  }).join('');
 }
 
 /* ---------------- palm / face photo reading ---------------- */
