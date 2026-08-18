@@ -1,7 +1,7 @@
 // 사주행운 서비스워커 - PWA 설치 및 기본 오프라인 지원용
-// v2: 캐시 우선 -> 네트워크 우선으로 전략 변경 (배포 시 최신 코드가 바로 반영되도록).
+// v3: 캐시 우선 -> 네트워크 우선으로 전략 변경 (배포 시 최신 코드가 바로 반영되도록).
 // 앱 코드를 수정할 때마다 CACHE_NAME 값을 올려주세요. 그래야 예전 캐시가 확실히 폐기됩니다.
-const CACHE_NAME = 'saju-lucky-v2';
+const CACHE_NAME = 'saju-lucky-v3';
 const APP_SHELL = [
   '/',
   '/index.html',
