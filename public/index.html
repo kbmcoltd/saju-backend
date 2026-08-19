@@ -724,7 +724,7 @@
       <div class="photo-frame" id="palm-photo-frame">
         <span class="photo-placeholder" data-i18n="photo.none">✋<br>사진 없음</span>
       </div>
-      <input type="file" id="palm-file-input" accept="image/*" class="hidden" onchange="onPhotoSelected('palm')">
+      <input type="file" id="palm-file-input" accept="image/*" capture="environment" class="hidden" onchange="onPhotoSelected('palm')">
       <button class="btn-primary" data-i18n="photo.select" onclick="document.getElementById('palm-file-input').click()">사진 촬영 / 선택</button>
       <button class="btn-primary" id="palm-analyze-btn" style="display:none" data-i18n="palm.analyze" onclick="analyzePhoto('palm')">AI 손금 분석하기</button>
       <div class="err" id="palm-err"></div>
@@ -754,7 +754,7 @@
       <div class="photo-frame" id="face-photo-frame">
         <span class="photo-placeholder" data-i18n="photo.none2">👤<br>사진 없음</span>
       </div>
-      <input type="file" id="face-file-input" accept="image/*" class="hidden" onchange="onPhotoSelected('face')">
+      <input type="file" id="face-file-input" accept="image/*" capture="user" class="hidden" onchange="onPhotoSelected('face')">
       <button class="btn-primary" data-i18n="photo.select" onclick="document.getElementById('face-file-input').click()">사진 촬영 / 선택</button>
       <button class="btn-primary" id="face-analyze-btn" style="display:none" data-i18n="face.analyze" onclick="analyzePhoto('face')">AI 관상 분석하기</button>
       <div class="err" id="face-err"></div>
