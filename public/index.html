@@ -470,6 +470,18 @@
     color:#6c6a78;
     margin-top:2px;
   }
+  .home-footer-links{
+    text-align:center;
+    margin-top:22px;
+    font-size:11.5px;
+    color:#6c6a78;
+  }
+  .home-footer-links a{
+    color:#6c6a78;
+    text-decoration:underline;
+    cursor:pointer;
+  }
+  .home-footer-links span{margin:0 6px;}
 
   /* photo capture */
   .photo-frame{
@@ -537,6 +549,7 @@
       <button class="btn-primary" data-i18n="signup.submit" onclick="handleSignup()">가입하고 시작하기</button>
     </div>
     <div class="link-row"><span data-i18n="signup.haveAccount">이미 계정이 있으신가요? </span><a data-i18n="nav.login" onclick="showScreen('login')">로그인</a></div>
+    <div class="link-row"><a href="/privacy.html" target="_blank" rel="noopener" data-i18n="home.privacyLink">개인정보처리방침</a></div>
   </div>
 
   <!-- LOGIN -->
@@ -617,6 +630,12 @@
           <div class="hub-sub" data-i18n="home.face.sub">얼굴 사진으로 보는 AI 인상 총평</div>
         </div>
       </button>
+    </div>
+
+    <div class="home-footer-links">
+      <a href="/privacy.html" target="_blank" rel="noopener" data-i18n="home.privacyLink">개인정보처리방침</a>
+      <span aria-hidden="true">·</span>
+      <a onclick="handleDeleteAccount()" data-i18n="home.deleteAccountLink">회원 탈퇴</a>
     </div>
   </div>
 
@@ -816,6 +835,11 @@ const TRANSLATIONS = {
   'home.palm.sub': { ko: '손바닥 사진으로 보는 AI 손금', en: 'AI palm reading from a photo of your hand' },
   'home.face.label': { ko: '관상 보기', en: 'Face Reading' },
   'home.face.sub': { ko: '얼굴 사진으로 보는 AI 인상 총평', en: 'AI face reading from a photo of your face' },
+  'home.privacyLink': { ko: '개인정보처리방침', en: 'Privacy Policy' },
+  'home.deleteAccountLink': { ko: '회원 탈퇴', en: 'Delete Account' },
+  'account.deleteConfirm': { ko: '정말 탈퇴하시겠어요? 계정과 관련 데이터가 즉시 삭제되며 되돌릴 수 없습니다.', en: 'Are you sure you want to delete your account? This immediately and permanently removes your account and data.' },
+  'account.deletePasswordPrompt': { ko: '본인 확인을 위해 비밀번호를 입력해 주세요.', en: 'Please enter your password to confirm.' },
+  'account.deleted': { ko: '계정이 삭제되었습니다.', en: 'Your account has been deleted.' },
   'birth.title': { ko: '생년월일시 입력', en: 'Enter Your Birth Date & Time' },
   'birth.desc': { ko: "태어난 연월일시를 입력하면 사주팔자와 행운번호를 알려드려요. 시간을 모르면 '모름'을 선택하세요.", en: "Enter your birth date and time to see your Saju chart and lucky numbers. If you don't know the time, select 'Unknown'." },
   'birth.calendarType': { ko: '달력 기준', en: 'Calendar Type' },
@@ -865,6 +889,7 @@ const TRANSLATIONS = {
   'err.birthRequired': { ko: '생년월일을 선택해 주세요.', en: 'Please select your date of birth.' },
   'err.lunarInvalid': { ko: '입력하신 음력 날짜가 올바르지 않습니다. 연도(1900~2100)와 윤달 여부를 확인해 주세요.', en: 'The lunar date entered is invalid. Please check the year (1900-2100) and leap month setting.' },
   'err.imageOnly': { ko: '이미지 파일만 업로드할 수 있어요.', en: 'Only image files can be uploaded.' },
+  'err.imageTooLarge': { ko: '이미지 용량이 너무 큽니다. 더 작은 사진으로 다시 시도해 주세요.', en: 'The image is too large. Please try a smaller photo.' },
   'err.photoLoadFailed': { ko: '사진을 불러오는 데 실패했습니다. 다시 시도해 주세요.', en: 'Failed to load the photo. Please try again.' },
   'err.selectPhotoFirst': { ko: '먼저 사진을 촬영하거나 선택해 주세요.', en: 'Please take or select a photo first.' },
   'msg.analyzing': { ko: 'AI가 분석 중이에요...', en: 'AI is analyzing...' },
@@ -934,6 +959,11 @@ function setLang(lang){
 /* ---------------- storage helpers (browser localStorage, works standalone) ---------------- */
 const LS_PREFIX = 'sajuapp_';
 const LS_PREFIX_LANG = LS_PREFIX + 'lang';
+
+// Only non-credential, non-sensitive content (birth info, computed saju, lucky
+// numbers, cached fortune text) is cached client-side. Login state and passwords
+// live entirely on the backend (httpOnly session cookie + hashed password) -
+// see the API helpers below.
 async function saveUser(user){
   try{
     localStorage.setItem(LS_PREFIX+'user:'+user.phone, JSON.stringify(user));
@@ -945,19 +975,34 @@ async function loadUser(phone){
     return v ? JSON.parse(v) : null;
   }catch(e){ return null; }
 }
-async function setSession(phone){
-  try{
-    localStorage.setItem(LS_PREFIX+'session', JSON.stringify({phone}));
-  }catch(e){ console.error('세션 저장 실패', e); }
+
+/* ---------------- backend API helpers ---------------- */
+async function apiPost(path, body){
+  const response = await fetch(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...body, lang: currentLang })
+  });
+  const data = await response.json().catch(()=>null);
+  if(!response.ok){
+    throw new Error((data && data.error) || (t('err.serverResponse') + response.status + ')'));
+  }
+  return data;
 }
-async function getSession(){
-  try{
-    const v = localStorage.getItem(LS_PREFIX+'session');
-    return v ? JSON.parse(v) : null;
-  }catch(e){ return null; }
+async function apiGet(path){
+  const response = await fetch(path + '?lang=' + encodeURIComponent(currentLang));
+  const data = await response.json().catch(()=>null);
+  if(!response.ok){
+    throw new Error((data && data.error) || (t('err.serverResponse') + response.status + ')'));
+  }
+  return data;
 }
-async function clearSession(){
-  try{ localStorage.removeItem(LS_PREFIX+'session'); }catch(e){}
+// Merges the server's auth identity with any locally-cached content for that
+// phone number (or a blank profile for a first-time login on this device).
+async function hydrateCurrentUser(authData){
+  const cached = (await loadUser(authData.phone)) || { birth:null, saju:null, lucky:null, sets:null };
+  currentUser = { ...cached, name: authData.name, phone: authData.phone };
+  await saveUser(currentUser);
 }
 
 /* ---------------- validation ---------------- */
@@ -983,7 +1028,7 @@ function showScreen(name){
   window.scrollTo(0,0);
 }
 
-/* ---------------- signup / login ---------------- */
+/* ---------------- signup / login (credentials handled entirely by the backend) ---------------- */
 async function handleSignup(){
  try{
   const name = document.getElementById('su-name').value.trim();
@@ -999,17 +1044,12 @@ async function handleSignup(){
   if(pw!==pw2){ errEl.textContent=t('err.passwordMismatch'); return; }
 
   const phone = normalizePhone(phoneRaw);
-  const existing = await loadUser(phone);
-  if(existing){ errEl.textContent=t('err.phoneAlreadyUsed'); return; }
-
-  const user = { name, phone, password: pw, birth:null, saju:null, lucky:null, sets:null };
-  await saveUser(user);
-  await setSession(phone);
-  currentUser = user;
+  const authData = await apiPost('/api/auth/signup', { name, phone, password: pw });
+  await hydrateCurrentUser(authData);
   await enterAfterAuth();
  }catch(e){
    console.error(e);
-   document.getElementById('su-err').textContent = t('err.generic') + e.message;
+   document.getElementById('su-err').textContent = e.message;
  }
 }
 
@@ -1021,16 +1061,18 @@ async function handleLogin(){
 
   if(!isValidPhone(phoneRaw)){ errEl.textContent=t('err.phoneInvalid2'); return; }
   const phone = normalizePhone(phoneRaw);
-  const user = await loadUser(phone);
-  if(!user || user.password!==pw){ errEl.textContent=t('err.loginFailed'); return; }
-
-  await setSession(phone);
-  currentUser = user;
-  await enterAfterAuth();
+  try{
+    const authData = await apiPost('/api/auth/login', { phone, password: pw });
+    await hydrateCurrentUser(authData);
+    await enterAfterAuth();
+  }catch(e){
+    console.error(e);
+    errEl.textContent = e.message;
+  }
 }
 
 async function logout(){
-  await clearSession();
+  try{ await apiPost('/api/auth/logout', {}); }catch(e){ console.error(e); }
   currentUser = null;
   document.getElementById('su-name').value='';
   document.getElementById('su-phone').value='';
@@ -1042,11 +1084,34 @@ async function logout(){
   showScreen('login');
 }
 
-/* ---------------- password reset ---------------- */
-let resetVerifiedPhone = null;
+// Self-service account deletion (in addition to the public /delete-account.html
+// page) - requires re-entering the password since this is irreversible.
+async function handleDeleteAccount(){
+  if(!confirm(t('account.deleteConfirm'))) return;
+  const password = prompt(t('account.deletePasswordPrompt'));
+  if(!password) return;
+  try{
+    await apiPost('/api/auth/account/delete', { password });
+  }catch(e){
+    alert(e.message);
+    return;
+  }
+  if(currentUser) await (async()=>{ try{ localStorage.removeItem(LS_PREFIX+'user:'+currentUser.phone); }catch(err){} })();
+  currentUser = null;
+  alert(t('account.deleted'));
+  resetPasswordResetScreen();
+  showScreen('login');
+}
+
+/* ---------------- password reset ----------------
+ * Identity is checked server-side (name + phone) and, if it matches, the server
+ * hands back a short-lived signed token instead of logging the caller in directly -
+ * see the comment on POST /api/auth/reset/verify in server.js for why that check
+ * alone isn't a strong enough proof of identity for a public launch. */
+let resetToken = null;
 
 function resetPasswordResetScreen(){
-  resetVerifiedPhone = null;
+  resetToken = null;
   document.getElementById('rs-name').value='';
   document.getElementById('rs-phone').value='';
   document.getElementById('rs-pw').value='';
@@ -1069,13 +1134,14 @@ async function handleResetVerify(){
   if(!isValidPhone(phoneRaw)){ errEl.textContent=t('err.phoneInvalid2'); return; }
 
   const phone = normalizePhone(phoneRaw);
-  const user = await loadUser(phone);
-  if(!user || user.name !== name){
-    errEl.textContent = t('err.resetNotFound');
+  try{
+    const data = await apiPost('/api/auth/reset/verify', { name, phone });
+    resetToken = data.resetToken;
+  }catch(e){
+    errEl.textContent = e.message;
     return;
   }
 
-  resetVerifiedPhone = phone;
   document.getElementById('rs-name').disabled = true;
   document.getElementById('rs-phone').disabled = true;
   document.getElementById('rs-step2').classList.remove('hidden');
@@ -1086,18 +1152,19 @@ async function handleResetVerify(){
 async function handleResetSave(){
   const errEl = document.getElementById('rs-err');
   errEl.textContent='';
-  if(!resetVerifiedPhone){ errEl.textContent=t('err.resetVerifyFirst'); return; }
+  if(!resetToken){ errEl.textContent=t('err.resetVerifyFirst'); return; }
 
   const pw = document.getElementById('rs-pw').value;
   const pw2 = document.getElementById('rs-pw2').value;
   if(!isValidPassword(pw)){ errEl.textContent=t('err.passwordInvalid'); return; }
   if(pw!==pw2){ errEl.textContent=t('err.passwordMismatch'); return; }
 
-  const user = await loadUser(resetVerifiedPhone);
-  if(!user){ errEl.textContent=t('err.resetUserNotFound'); return; }
-
-  user.password = pw;
-  await saveUser(user);
+  try{
+    await apiPost('/api/auth/reset/save', { resetToken, password: pw });
+  }catch(e){
+    errEl.textContent = e.message;
+    return;
+  }
 
   resetPasswordResetScreen();
   showScreen('login');
@@ -1570,9 +1637,14 @@ async function getTodaysFortune(user){
     ? `As of ${now.getMonth()+1}/${now.getDate()}/${now.getFullYear()} · Today's energy: ${elementLabel(element)}`
     : `${now.getFullYear()}년 ${now.getMonth()+1}월 ${now.getDate()}일 기준 · 오늘의 기운 '${elementLabel(element)}(${dayStem})'`;
 
-  // Same-day, same-language cache: avoid calling the AI again if we already generated
-  // today's fortune in the language currently selected.
-  if(user.fortune && user.fortuneDate === todayKey && user.fortuneLang === currentLang){
+  // Same-day, same-language, same-saju cache: avoid calling the AI again if we
+  // already generated today's fortune for this exact day-pillar. The dayStem is
+  // part of the key (not just the date) because "생년월일시 다시 입력" can change
+  // the computed saju - and therefore the element - within the same calendar day;
+  // without it, a stale fortune for the old element would be shown under the new
+  // element's badge.
+  const fortuneKey = `${dayStem}-${todayKey}-${currentLang}`;
+  if(user.fortune && user.fortuneKey === fortuneKey){
     return { element, items: user.fortune, dateLabel };
   }
 
@@ -1584,21 +1656,13 @@ async function getTodaysFortune(user){
     monthStem: saju.month.stem, monthBranch: saju.month.branch,
     hourStem: saju.hour ? saju.hour.stem : null,
     hourBranch: saju.hour ? saju.hour.branch : null,
-    dateLabel,
-    lang: currentLang
+    dateLabel
   };
 
   let items;
   try{
-    const response = await fetch(FORTUNE_ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    const data = await response.json().catch(()=>null);
-    if(!response.ok || !data || !Array.isArray(data.items)){
-      throw new Error((data && data.error) || (t('err.serverResponse') + response.status + ')'));
-    }
+    const data = await apiPost(FORTUNE_ENDPOINT, payload);
+    if(!Array.isArray(data.items)) throw new Error(t('err.noAiResult'));
     items = FORTUNE_CATEGORIES.map(cat=>{
       const found = data.items.find(it=>it.category===cat);
       const text = (found && found.text) ? found.text : getFallbackFortune(user, element, dayStem, todayKey).find(f=>f.category===cat).text;
@@ -1610,8 +1674,7 @@ async function getTodaysFortune(user){
   }
 
   user.fortune = items;
-  user.fortuneDate = todayKey;
-  user.fortuneLang = currentLang;
+  user.fortuneKey = fortuneKey;
   await saveUser(user);
 
   return { element, items, dateLabel };
@@ -1733,13 +1796,32 @@ async function renderResult(){
   const fortuneTagText = currentLang==='en' ? `Today's Energy · ${elementLabel(fortune.element)}` : `오늘의 기운 · ${elementLabel(fortune.element)}`;
   document.getElementById('fortune-tag-wrap').innerHTML =
     `<span class="fortune-tag">${fortuneTagText}</span>`;
-  document.getElementById('fortune-items').innerHTML = fortune.items.map(item=>`
-    <div class="fortune-item">
-      <div class="fortune-item-label">${item.icon} ${item.label}</div>
-      <div class="fortune-item-text">${item.text}</div>
-    </div>
-  `).join('');
+  renderFortuneItems(fortune.items);
   document.getElementById('fortune-date').textContent = fortune.dateLabel;
+}
+
+// item.text comes from the /api/fortune backend (an LLM response), so it is built
+// with textContent rather than innerHTML - an AI response that happens to contain
+// HTML must never be parsed as markup here. item.icon/label are developer-defined
+// constants and safe to treat as trusted.
+function renderFortuneItems(items){
+  const wrap = document.getElementById('fortune-items');
+  wrap.innerHTML = '';
+  items.forEach(item=>{
+    const row = document.createElement('div');
+    row.className = 'fortune-item';
+
+    const label = document.createElement('div');
+    label.className = 'fortune-item-label';
+    label.textContent = `${item.icon} ${item.label}`;
+
+    const text = document.createElement('div');
+    text.className = 'fortune-item-text';
+    text.textContent = item.text;
+
+    row.append(label, text);
+    wrap.appendChild(row);
+  });
 }
 
 /* ---------------- palm / face photo reading ---------------- */
@@ -1760,6 +1842,31 @@ function resetPhotoScreen(type){
   document.getElementById(type+'-result-card').classList.add('hidden');
 }
 
+// Downscales a data URL to at most maxDim on its longest side and re-encodes it as
+// JPEG. Raw camera photos can be 10-20MB, which is slow to upload on mobile and can
+// exceed the backend's request-size limit, so every photo is normalized before it's
+// ever sent to /api/analyze.
+function resizeImageDataUrl(dataUrl, maxDim, quality){
+  return new Promise((resolve, reject)=>{
+    const img = new Image();
+    img.onload = function(){
+      let { width, height } = img;
+      if(width > maxDim || height > maxDim){
+        const scale = maxDim / Math.max(width, height);
+        width = Math.round(width * scale);
+        height = Math.round(height * scale);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => reject(new Error('image decode failed'));
+    img.src = dataUrl;
+  });
+}
+
 function onPhotoSelected(type){
   const input = document.getElementById(type+'-file-input');
   const errEl = document.getElementById(type+'-err');
@@ -1771,10 +1878,21 @@ function onPhotoSelected(type){
     return;
   }
   const reader = new FileReader();
-  reader.onload = function(e){
-    const dataUrl = e.target.result;
+  reader.onload = async function(e){
+    let dataUrl = e.target.result;
+    try{
+      dataUrl = await resizeImageDataUrl(dataUrl, 1280, 0.85);
+    }catch(err){
+      console.warn('이미지 리사이즈 실패, 원본으로 진행합니다:', err);
+    }
     const [header, base64] = dataUrl.split(',');
     const mediaType = header.match(/data:(.*);base64/)[1];
+
+    if(base64.length > 9_000_000){
+      errEl.textContent = t('err.imageTooLarge');
+      return;
+    }
+
     photoState[type] = { base64, mediaType };
 
     const altText = type==='palm' ? (currentLang==='en' ? 'Palm photo' : '손금 사진') : (currentLang==='en' ? 'Face photo' : '얼굴 사진');
@@ -1794,15 +1912,7 @@ function onPhotoSelected(type){
 const ANALYZE_ENDPOINT = '/api/analyze';
 
 async function callBackendAnalyze(type, base64, mediaType){
-  const response = await fetch(ANALYZE_ENDPOINT, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ type, base64, mediaType, lang: currentLang })
-  });
-  const data = await response.json().catch(()=>null);
-  if(!response.ok){
-    throw new Error((data && data.error) || (t('err.serverResponse') + response.status + ')'));
-  }
+  const data = await apiPost(ANALYZE_ENDPOINT, { type, base64, mediaType });
   if(!data || !data.result){ throw new Error(t('err.noAiResult')); }
   return data.result;
 }
@@ -1850,14 +1960,15 @@ async function boot(){
   }catch(e){}
   applyTranslations();
   fillBirthSelects();
-  const session = await getSession();
-  if(session && session.phone){
-    const user = await loadUser(session.phone);
-    if(user){
-      currentUser = user;
-      await enterAfterAuth();
-      return;
-    }
+  try{
+    // The httpOnly session cookie (if any) is sent automatically; this just asks
+    // the server whether it's still valid.
+    const authData = await apiGet('/api/auth/me');
+    await hydrateCurrentUser(authData);
+    await enterAfterAuth();
+    return;
+  }catch(e){
+    // Not logged in / session expired - fall through to the signup screen.
   }
   showScreen('signup');
 }

@@ -1,18 +1,22 @@
 {
-  "name": "saju-app-backend",
+  "name": "sajuapp",
   "version": "1.0.0",
   "private": true,
-  "description": "사주행운 앱 백엔드 - 손금/관상 AI 분석 API 프록시 서버",
+  "description": "사주행운 - Saju fortune app backend (Claude API for palm/face reading + daily fortune)",
+  "type": "commonjs",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js"
   },
-  "engines": {
-    "node": ">=18"
-  },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.1",
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.6",
     "dotenv": "^16.4.5",
-    "express": "^4.19.2"
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.4.0",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.23.0"
   }
 }

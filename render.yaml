@@ -1,0 +1,31 @@
+# Render Blueprint: deploys the web service and a Postgres database together,
+# and wires DATABASE_URL from the database to the web service automatically.
+# https://render.com/docs/blueprint-spec
+#
+# To use: push this repo to GitHub, then in the Render dashboard choose
+# "New +" > "Blueprint" and point it at the repo. You'll still need to set
+# ANTHROPIC_API_KEY by hand in the web service's Environment tab (it's marked
+# sync: false below so Render prompts for it instead of storing it in this file).
+#
+# Note: Render's free Postgres plan is deleted after 30 days. For anything
+# past a short internal test, upgrade the database's plan before that expires.
+services:
+  - type: web
+    name: saju-lucky777
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: saju-lucky777-db
+          property: connectionString
+
+databases:
+  - name: saju-lucky777-db
+    plan: free

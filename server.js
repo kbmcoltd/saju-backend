@@ -1,314 +1,446 @@
 require('dotenv').config();
-const express = require('express');
+
 const path = require('path');
+const express = require('express');
+const cookieParser = require('cookie-parser');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const rateLimit = require('express-rate-limit');
+const Anthropic = require('@anthropic-ai/sdk');
+const { Pool } = require('pg');
 
-const app = express();
-
-// Allow reasonably large JSON bodies since we're sending base64-encoded photos.
-app.use(express.json({ limit: '12mb' }));
-
-// Serve the frontend (public/index.html + any other static assets) from the same server.
-app.use(express.static(path.join(__dirname, 'public')));
-
+const SESSION_SECRET = process.env.SESSION_SECRET;
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+const DATABASE_URL = process.env.DATABASE_URL;
+const PORT = process.env.PORT || 3000;
+const CLAUDE_MODEL = process.env.CLAUDE_MODEL || 'claude-sonnet-5';
+
+if (!SESSION_SECRET || SESSION_SECRET === 'change-me-to-a-long-random-value') {
+  console.error('SESSION_SECRET이 설정되지 않았습니다. .env 파일을 만들고 .env.example을 참고해 값을 채워주세요.');
+  process.exit(1);
+}
 if (!ANTHROPIC_API_KEY) {
-  console.warn('[경고] ANTHROPIC_API_KEY 환경변수가 설정되어 있지 않습니다. .env 파일을 확인하세요.');
+  console.error('ANTHROPIC_API_KEY가 설정되지 않았습니다. .env 파일에 Claude API 키를 넣어주세요.');
+  process.exit(1);
+}
+if (!DATABASE_URL) {
+  console.error('DATABASE_URL이 설정되지 않았습니다. Postgres 연결 문자열을 .env에 넣어주세요 (예: Render Postgres의 Internal/External Database URL).');
+  process.exit(1);
 }
 
-const PALM_PROMPT_KO = `당신은 재미로 손금을 봐주는 친근한 콘텐츠 크리에이터입니다. 첨부된 손바닥 사진을 보고, 전통 손금 풀이 스타일(생명선·감정선·두뇌선처럼 보이는 특징 언급)로 위트있고 희망적인 한국어 결과를 3~4문장으로 작성해 주세요.
-반드시 지켜야 할 규칙:
-- 의학적 진단, 건강 상태, 수명에 대한 언급은 절대 하지 마세요.
-- 사진 속 인물이 누구인지 추측하거나 신원을 특정하지 마세요.
-- 나이, 인종, 성별 등 민감한 특성에 대한 언급 없이, 오직 재미로 보는 손금 콘텐츠로만 작성하세요.
-- 결과 텍스트만 출력하고, 다른 설명이나 전제문은 붙이지 마세요.`;
+const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
 
-const PALM_PROMPT_EN = `You are a friendly content creator doing palm readings for entertainment. Looking at the attached photo of a palm, write a witty, upbeat palm reading in 3-4 sentences in English, in the style of traditional palmistry (referencing features that look like the life line, heart line, head line, etc.).
-Rules you must follow:
-- Never mention medical diagnoses, health conditions, or lifespan.
-- Never guess or identify who the person in the photo is.
-- Do not mention age, race, gender, or other sensitive traits — keep it purely fun palmistry-style content.
-- Output only the result text, with no preamble or extra explanation.`;
+/* ---------------- Postgres-backed user store ----------------
+ * Render's web service filesystem is ephemeral (wiped on every deploy/restart),
+ * so accounts live in Postgres instead of a local file - see render.yaml, which
+ * provisions a free Postgres database and wires DATABASE_URL automatically. */
+const pool = new Pool({
+  connectionString: DATABASE_URL,
+  // Render's managed Postgres uses a certificate that Node's default trust store
+  // doesn't recognize; a plain localhost dev database has no TLS at all.
+  ssl: /localhost|127\.0\.0\.1/.test(DATABASE_URL) ? false : { rejectUnauthorized: false },
+});
 
-const FACE_PROMPT_KO = `당신은 재미로 관상을 봐주는 친근한 콘텐츠 크리에이터입니다. 첨부된 얼굴 사진의 표정과 분위기(눈빛, 미소, 전체적인 인상)를 바탕으로, 전통 관상 풀이 스타일의 위트있고 긍정적인 한국어 총평을 3~4문장으로 작성해 주세요.
-반드시 지켜야 할 규칙:
-- 외모를 평가하거나 매력도를 판단하는 표현은 쓰지 마세요.
-- 건강, 수명, 결혼운, 재물운처럼 단정적인 예언은 하지 마세요.
-- 인종, 나이, 성별 등 민감한 특성에 대한 언급 없이, 성격이나 분위기에 대한 긍정적인 인상만 다루세요.
-- 사진 속 인물이 누구인지 추측하거나 신원을 특정하지 마세요.
-- 결과 텍스트만 출력하고, 다른 설명이나 전제문은 붙이지 마세요.`;
+async function initDb() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      phone TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      password_hash TEXT NOT NULL,
+      created_at BIGINT NOT NULL
+    )
+  `);
+}
 
-const FACE_PROMPT_EN = `You are a friendly content creator doing face readings for entertainment. Based on the expression and mood in the attached face photo (eyes, smile, overall impression), write a witty, positive overall impression in 3-4 sentences in English, in the style of traditional face reading.
-Rules you must follow:
-- Never evaluate physical appearance or judge attractiveness.
-- Never make definitive predictions about health, lifespan, marriage, or wealth.
-- Do not mention race, age, gender, or other sensitive traits — only cover positive impressions of personality or mood.
-- Never guess or identify who the person in the photo is.
-- Output only the result text, with no preamble or extra explanation.`;
+async function getUser(phone) {
+  const { rows } = await pool.query(
+    'SELECT phone, name, password_hash AS "passwordHash", created_at AS "createdAt" FROM users WHERE phone = $1',
+    [phone]
+  );
+  return rows[0] || null;
+}
+async function upsertUser(user) {
+  await pool.query(
+    `INSERT INTO users (phone, name, password_hash, created_at)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (phone) DO UPDATE SET name = EXCLUDED.name, password_hash = EXCLUDED.password_hash`,
+    [user.phone, user.name, user.passwordHash, user.createdAt || Date.now()]
+  );
+}
+async function deleteUser(phone) {
+  await pool.query('DELETE FROM users WHERE phone = $1', [phone]);
+}
 
-// User-facing error messages, bilingual. Falls back to Korean if lang is missing/unrecognized.
-const MESSAGES = {
-  noApiKey: { ko: '서버에 ANTHROPIC_API_KEY가 설정되어 있지 않습니다.', en: 'ANTHROPIC_API_KEY is not configured on the server.' },
-  rateLimited: { ko: '요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.', en: 'Too many requests. Please try again in a moment.' },
-  invalidType: { ko: '요청 종류(type)가 올바르지 않습니다.', en: 'Invalid request type.' },
-  noImageData: { ko: '이미지 데이터가 없습니다.', en: 'No image data provided.' },
-  unsupportedFormat: { ko: '지원하지 않는 이미지 형식입니다. (jpg/png/webp/gif만 가능)', en: 'Unsupported image format. (jpg/png/webp/gif only)' },
-  imageTooLarge: { ko: '이미지 용량이 너무 큽니다.', en: 'The image file is too large.' },
-  aiServerError: { ko: 'AI 서버 응답 오류가 발생했습니다.', en: 'The AI server returned an error.' },
-  noAiResult: { ko: 'AI로부터 결과를 받지 못했습니다.', en: 'No result was received from the AI.' },
-  serverError: { ko: '서버 오류가 발생했습니다.', en: 'A server error occurred.' },
-  invalidPillars: { ko: '사주 정보가 올바르지 않습니다.', en: 'The Saju (Four Pillars) data is invalid.' },
-  fortuneParseFailed: { ko: 'AI 응답을 해석하지 못했습니다.', en: "Couldn't parse the AI's response." },
-  noValidFortune: { ko: 'AI로부터 유효한 운세 결과를 받지 못했습니다.', en: 'No valid fortune result was received from the AI.' },
+/* ---------------- validation (mirrors client-side rules) ---------------- */
+function normalizePhone(v) {
+  return String(v || '').replace(/[^0-9]/g, '');
+}
+function isValidPhone(v) {
+  const d = normalizePhone(v);
+  return d.length === 10 || d.length === 11;
+}
+function isValidPassword(v) {
+  const s = String(v || '');
+  return /[A-Za-z]/.test(s) && /[0-9]/.test(s) && /[^A-Za-z0-9]/.test(s) && s.length >= 8;
+}
+
+/* ---------------- localized error messages (mirrors client TRANSLATIONS keys) ---------------- */
+const ERR = {
+  nameRequired: { ko: '이름을 입력해 주세요.', en: 'Please enter your name.' },
+  phoneInvalid: { ko: '전화번호를 정확히 입력해 주세요.', en: 'Please enter a valid phone number.' },
+  passwordInvalid: { ko: '비밀번호는 영문, 숫자, 특수문자를 포함해 8자 이상이어야 합니다.', en: 'Password must include letters, numbers, and symbols, at least 8 characters.' },
+  phoneAlreadyUsed: { ko: '이미 가입된 전화번호입니다. 로그인해 주세요.', en: 'This phone number is already registered. Please log in.' },
+  loginFailed: { ko: '전화번호 또는 비밀번호가 올바르지 않습니다.', en: 'Incorrect phone number or password.' },
+  resetNotFound: { ko: '일치하는 회원 정보를 찾을 수 없습니다. 이름과 전화번호를 다시 확인해 주세요.', en: 'No matching account found. Please check your name and phone number again.' },
+  resetTokenMissing: { ko: '본인 확인을 먼저 진행해 주세요.', en: 'Please verify your identity first.' },
+  resetTokenExpired: { ko: '본인 확인이 만료되었습니다. 다시 시도해 주세요.', en: 'Identity verification expired. Please try again.' },
+  resetUserNotFound: { ko: '회원 정보를 찾을 수 없습니다.', en: 'Account not found.' },
+  tooManyRequests: { ko: '요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.', en: 'Too many requests. Please try again later.' },
+  needLogin: { ko: '로그인이 필요합니다.', en: 'Please log in.' },
+  accountNotFound: { ko: '계정을 찾을 수 없습니다.', en: 'Account not found.' },
+  sessionExpired: { ko: '세션이 만료되었습니다. 다시 로그인해 주세요.', en: 'Your session has expired. Please log in again.' },
+  invalidRequest: { ko: '유효하지 않은 요청입니다.', en: 'Invalid request.' },
+  unsupportedAnalyzeType: { ko: '지원하지 않는 분석 유형입니다.', en: 'Unsupported analysis type.' },
+  noPhotoData: { ko: '사진 데이터가 없습니다.', en: 'No photo data was provided.' },
+  unsupportedImageType: { ko: '지원하지 않는 이미지 형식입니다.', en: 'Unsupported image format.' },
+  imageTooLarge: { ko: '이미지 용량이 너무 큽니다. 더 작은 사진으로 다시 시도해 주세요.', en: 'The image is too large. Please try a smaller photo.' },
+  noAiResult: { ko: 'AI로부터 결과를 받지 못했습니다.', en: 'No result received from the AI.' },
+  analyzeFailed: { ko: 'AI 분석 중 오류가 발생했습니다.', en: 'An error occurred during AI analysis.' },
+  invalidSajuData: { ko: '사주 정보가 올바르지 않습니다.', en: 'Invalid Saju data.' },
+  fortuneFailed: { ko: 'AI 운세 생성 중 오류가 발생했습니다.', en: 'An error occurred while generating the AI fortune.' },
+  passwordRequired: { ko: '비밀번호를 입력해 주세요.', en: 'Please enter your password.' },
+  accountDeleted: { ko: '계정이 삭제되었습니다.', en: 'Your account has been deleted.' },
 };
-function msg(key, lang) {
-  const entry = MESSAGES[key];
-  return entry ? (entry[lang] || entry.ko) : key;
-}
-function normalizeLang(lang) {
-  return lang === 'en' ? 'en' : 'ko';
+function errMsg(key, lang) {
+  const entry = ERR[key];
+  if (!entry) return key;
+  return entry[lang === 'en' ? 'en' : 'ko'];
 }
 
-const ALLOWED_MEDIA_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+/* ---------------- sessions & reset tokens (JWT) ---------------- */
+const SESSION_COOKIE = 'sajuapp_session';
+const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
-// Very small in-memory rate limiter: max N requests per IP per hour, per named bucket.
-// Good enough for a small personal/demo deployment; swap for a real store (Redis, etc.)
-// if you expect meaningful traffic.
-const rateLimitBuckets = new Map(); // bucketName -> Map(ip -> {count, windowStart})
-const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
-function isRateLimited(bucketName, ip, max) {
-  if (!rateLimitBuckets.has(bucketName)) rateLimitBuckets.set(bucketName, new Map());
-  const map = rateLimitBuckets.get(bucketName);
-  const now = Date.now();
-  const entry = map.get(ip) || { count: 0, windowStart: now };
-  if (now - entry.windowStart > RATE_LIMIT_WINDOW_MS) {
-    entry.count = 0;
-    entry.windowStart = now;
-  }
-  entry.count += 1;
-  map.set(ip, entry);
-  return entry.count > max;
+function issueSessionCookie(req, res, phone) {
+  const token = jwt.sign({ phone }, SESSION_SECRET, { expiresIn: '30d' });
+  res.cookie(SESSION_COOKIE, token, {
+    httpOnly: true,
+    sameSite: 'lax',
+    // Render (and most PaaS hosts) terminate TLS at the edge and proxy plain HTTP
+    // to the app, so NODE_ENV alone can't tell us the original request was HTTPS.
+    // `trust proxy` + req.secure reads X-Forwarded-Proto instead.
+    secure: req.secure,
+    maxAge: SESSION_MAX_AGE_MS,
+    path: '/',
+  });
 }
 
-// ---------------- Today's fortune (오늘의 사주 운세) via AI ----------------
-const STEMS = ['갑', '을', '병', '정', '무', '기', '경', '신', '임', '계'];
-const BRANCHES = ['자', '축', '인', '묘', '진', '사', '오', '미', '신', '유', '술', '해'];
-const ELEMENTS = ['목', '화', '토', '금', '수'];
-const FORTUNE_CATEGORIES = ['work', 'money', 'love', 'health'];
-
-function isValidPillarInput(body) {
-  const { element, dayStem, dayBranch, yearStem, yearBranch, monthStem, monthBranch, hourStem, hourBranch } = body || {};
-  if (!ELEMENTS.includes(element)) return false;
-  if (!STEMS.includes(dayStem) || !BRANCHES.includes(dayBranch)) return false;
-  if (!STEMS.includes(yearStem) || !BRANCHES.includes(yearBranch)) return false;
-  if (!STEMS.includes(monthStem) || !BRANCHES.includes(monthBranch)) return false;
-  // hour is optional, but if present both stem and branch must be valid; if absent both must be null/undefined.
-  const hourProvided = hourStem != null || hourBranch != null;
-  if (hourProvided && (!STEMS.includes(hourStem) || !BRANCHES.includes(hourBranch))) return false;
-  return true;
-}
-
-function buildFortunePrompt({ element, dayStem, dayBranch, yearStem, yearBranch, monthStem, monthBranch, hourStem, hourBranch }, lang) {
-  if (lang === 'en') {
-    const hourPart = hourStem && hourBranch ? `Hour Pillar: '${hourStem}${hourBranch}'` : 'Hour Pillar: unknown';
-    return `You are a content creator giving a fun daily fortune reading based on traditional Korean Saju (Four Pillars of Destiny) astrology.
-Here is a user's Saju information:
-- Year Pillar: '${yearStem}${yearBranch}'
-- Month Pillar: '${monthStem}${monthBranch}'
-- Day Pillar: '${dayStem}${dayBranch}'
-- ${hourPart}
-- Day Master element: '${element}'
-
-Based on this Saju information, write today's fortune for each of these four categories, each in English, at most 2 sentences: work (career/business), money (finances), love (romance), health (wellness).
-
-Rules you must follow:
-- Output ONLY a single valid JSON object. No markdown code fences, explanations, or greetings.
-- JSON format: {"items":[{"category":"work","text":"..."},{"category":"money","text":"..."},{"category":"love","text":"..."},{"category":"health","text":"..."}]}
-- For the health item, never mention medical diagnoses, disease names, treatments, or lifespan — only light wellness/lifestyle suggestions.
-- Avoid definitive predictions ("you will definitely..."); favor possibility and encouragement with a witty, hopeful tone.
-- Each text should be 40-160 characters.`;
-  }
-  const hourPart = hourStem && hourBranch ? `시주 '${hourStem}${hourBranch}'` : '시주 정보 없음';
-  return `당신은 한국 전통 사주 명리학을 바탕으로 재미 삼아 오늘의 운세를 알려주는 콘텐츠 크리에이터입니다.
-아래는 어떤 사용자의 사주 정보입니다:
-- 년주: '${yearStem}${yearBranch}'
-- 월주: '${monthStem}${monthBranch}'
-- 일주: '${dayStem}${dayBranch}'
-- ${hourPart}
-- 일간(日干)의 오행: '${element}'
-
-이 사주 정보를 바탕으로 오늘 하루의 운세를 아래 네 항목에 대해 각각 한국어 2문장 이내로 작성해 주세요: work(사업·일운), money(금전운), love(연애운), health(건강운).
-
-반드시 지켜야 할 규칙:
-- 순수한 JSON 객체 하나만 출력하세요. 마크다운 코드블록(백틱)이나 설명, 인사말은 절대 포함하지 마세요.
-- JSON 형식: {"items":[{"category":"work","text":"..."},{"category":"money","text":"..."},{"category":"love","text":"..."},{"category":"health","text":"..."}]}
-- health 항목에서는 의학적 진단, 질병명, 치료법, 수명을 절대 언급하지 말고 컨디션 관리나 생활 습관에 대한 가벼운 조언만 담아주세요.
-- "반드시 ~됩니다"처럼 확정적인 예언은 피하고, 가능성과 조언 위주로 위트있고 희망적인 톤을 유지하세요.
-- 각 text는 40자 이상 90자 이하로 작성하세요.`;
-}
-
-function parseFortuneJson(text) {
-  const cleaned = text.trim().replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '');
-  const parsed = JSON.parse(cleaned);
-  if (!parsed || !Array.isArray(parsed.items)) throw new Error('invalid fortune JSON shape');
-  return parsed.items
-    .filter((it) => it && FORTUNE_CATEGORIES.includes(it.category) && typeof it.text === 'string' && it.text.trim())
-    .map((it) => ({ category: it.category, text: it.text.trim().slice(0, 200) }));
-}
-
-app.post('/api/analyze', async (req, res) => {
-  const lang = normalizeLang(req.body && req.body.lang);
+async function requireAuth(req, res, next) {
+  const lang = (req.query && req.query.lang) || (req.body && req.body.lang);
+  const token = req.cookies && req.cookies[SESSION_COOKIE];
+  if (!token) return res.status(401).json({ error: errMsg('needLogin', lang) });
   try {
-    if (!ANTHROPIC_API_KEY) {
-      return res.status(500).json({ error: msg('noApiKey', lang) });
+    const payload = jwt.verify(token, SESSION_SECRET);
+    const user = await getUser(payload.phone);
+    if (!user) return res.status(401).json({ error: errMsg('accountNotFound', lang) });
+    req.user = user;
+    next();
+  } catch (e) {
+    if (e instanceof jwt.JsonWebTokenError || e instanceof jwt.TokenExpiredError) {
+      return res.status(401).json({ error: errMsg('sessionExpired', lang) });
     }
+    console.error('requireAuth 오류:', e);
+    return res.status(500).json({ error: errMsg('invalidRequest', lang) });
+  }
+}
 
-    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
-    if (isRateLimited('analyze', ip, 20)) {
-      return res.status(429).json({ error: msg('rateLimited', lang) });
-    }
+/* ---------------- app ---------------- */
+const app = express();
+app.set('trust proxy', 1);
+app.use(express.json({ limit: '12mb' })); // headroom above the client-side resized image size
+app.use(cookieParser());
+// Only ./public is served over HTTP - serving __dirname directly would publish
+// server.js, package.json/-lock.json, and .env alongside the app.
+const PUBLIC_DIR = path.join(__dirname, 'public');
+// express.static ignores dotfiles by default (so a stray request can't read .env
+// off the same directory) - the Digital Asset Links file needs to be reachable
+// despite that, so it gets its own narrowly-scoped static mount instead of a
+// blanket `dotfiles: 'allow'` on the whole public dir.
+app.use('/.well-known', express.static(path.join(PUBLIC_DIR, '.well-known'), { dotfiles: 'allow' }));
+app.use(express.static(PUBLIC_DIR, { index: 'index.html' }));
 
-    const { type, base64, mediaType } = req.body || {};
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => res.status(429).json({ error: errMsg('tooManyRequests', req.body && req.body.lang) }),
+});
+// Identity verification by name+phone is inherently guessable, so the reset-verify
+// endpoint gets a tighter limit than ordinary login/signup traffic.
+const resetVerifyLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 8,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => res.status(429).json({ error: errMsg('tooManyRequests', req.body && req.body.lang) }),
+});
 
-    if (type !== 'palm' && type !== 'face') {
-      return res.status(400).json({ error: msg('invalidType', lang) });
-    }
-    if (!base64 || typeof base64 !== 'string') {
-      return res.status(400).json({ error: msg('noImageData', lang) });
-    }
-    if (!mediaType || !ALLOWED_MEDIA_TYPES.has(mediaType)) {
-      return res.status(400).json({ error: msg('unsupportedFormat', lang) });
-    }
-    // Rough size guard: base64 is ~4/3 the size of the original bytes.
-    if (base64.length > 8 * 1024 * 1024) {
-      return res.status(400).json({ error: msg('imageTooLarge', lang) });
-    }
+/* ---------------- auth routes ---------------- */
+app.post('/api/auth/signup', authLimiter, async (req, res) => {
+  try {
+    const { name, phone: phoneRaw, password, lang } = req.body || {};
+    if (!name || !String(name).trim()) return res.status(400).json({ error: errMsg('nameRequired', lang) });
+    if (!isValidPhone(phoneRaw)) return res.status(400).json({ error: errMsg('phoneInvalid', lang) });
+    if (!isValidPassword(password)) return res.status(400).json({ error: errMsg('passwordInvalid', lang) });
 
-    const promptText = lang === 'en'
-      ? (type === 'palm' ? PALM_PROMPT_EN : FACE_PROMPT_EN)
-      : (type === 'palm' ? PALM_PROMPT_KO : FACE_PROMPT_KO);
+    const phone = normalizePhone(phoneRaw);
+    if (await getUser(phone)) return res.status(409).json({ error: errMsg('phoneAlreadyUsed', lang) });
 
-    const anthropicResponse = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 1000,
-        messages: [
-          {
-            role: 'user',
-            content: [
-              { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
-              { type: 'text', text: promptText },
-            ],
-          },
-        ],
-      }),
-    });
-
-    if (!anthropicResponse.ok) {
-      const errBody = await anthropicResponse.text().catch(() => '');
-      console.error('Anthropic API error:', anthropicResponse.status, errBody);
-      return res.status(502).json({ error: msg('aiServerError', lang) });
-    }
-
-    const data = await anthropicResponse.json();
-    const text = (data.content || [])
-      .map((item) => (item.type === 'text' ? item.text : ''))
-      .filter(Boolean)
-      .join('\n')
-      .trim();
-
-    if (!text) {
-      return res.status(502).json({ error: msg('noAiResult', lang) });
-    }
-
-    res.json({ result: text });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: msg('serverError', lang) });
+    const passwordHash = bcrypt.hashSync(password, 10);
+    await upsertUser({ name: String(name).trim(), phone, passwordHash, createdAt: Date.now() });
+    issueSessionCookie(req, res, phone);
+    res.json({ name: String(name).trim(), phone });
+  } catch (e) {
+    console.error('/api/auth/signup 오류:', e);
+    res.status(500).json({ error: errMsg('invalidRequest', req.body && req.body.lang) });
   }
 });
 
-app.post('/api/fortune', async (req, res) => {
-  const lang = normalizeLang(req.body && req.body.lang);
+app.post('/api/auth/login', authLimiter, async (req, res) => {
   try {
-    if (!ANTHROPIC_API_KEY) {
-      return res.status(500).json({ error: msg('noApiKey', lang) });
+    const { phone: phoneRaw, password, lang } = req.body || {};
+    if (!isValidPhone(phoneRaw)) return res.status(400).json({ error: errMsg('phoneInvalid', lang) });
+    const phone = normalizePhone(phoneRaw);
+    const user = await getUser(phone);
+    if (!user || !bcrypt.compareSync(String(password || ''), user.passwordHash)) {
+      return res.status(401).json({ error: errMsg('loginFailed', lang) });
+    }
+    issueSessionCookie(req, res, phone);
+    res.json({ name: user.name, phone: user.phone });
+  } catch (e) {
+    console.error('/api/auth/login 오류:', e);
+    res.status(500).json({ error: errMsg('invalidRequest', req.body && req.body.lang) });
+  }
+});
+
+app.post('/api/auth/logout', (req, res) => {
+  res.clearCookie(SESSION_COOKIE, { path: '/' });
+  res.json({ ok: true });
+});
+
+app.get('/api/auth/me', requireAuth, (req, res) => {
+  res.json({ name: req.user.name, phone: req.user.phone });
+});
+
+// Identity check only proves the caller knows the account's name + phone number.
+// That is inherently guessable, so this endpoint is rate-limited and only ever
+// issues a short-lived, single-purpose token instead of logging the caller in.
+// Before a public (non-internal-testing) launch this should be replaced with a
+// real possession proof, e.g. an SMS OTP sent to the phone number.
+app.post('/api/auth/reset/verify', resetVerifyLimiter, async (req, res) => {
+  try {
+    const { name, phone: phoneRaw, lang } = req.body || {};
+    if (!name || !String(name).trim()) return res.status(400).json({ error: errMsg('nameRequired', lang) });
+    if (!isValidPhone(phoneRaw)) return res.status(400).json({ error: errMsg('phoneInvalid', lang) });
+
+    const phone = normalizePhone(phoneRaw);
+    const user = await getUser(phone);
+    if (!user || user.name !== String(name).trim()) {
+      return res.status(404).json({ error: errMsg('resetNotFound', lang) });
     }
 
-    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
-    if (isRateLimited('fortune', ip, 30)) {
-      return res.status(429).json({ error: msg('rateLimited', lang) });
+    const resetToken = jwt.sign({ phone, purpose: 'reset' }, SESSION_SECRET, { expiresIn: '5m' });
+    res.json({ resetToken });
+  } catch (e) {
+    console.error('/api/auth/reset/verify 오류:', e);
+    res.status(500).json({ error: errMsg('invalidRequest', req.body && req.body.lang) });
+  }
+});
+
+app.post('/api/auth/reset/save', authLimiter, async (req, res) => {
+  try {
+    const { resetToken, password, lang } = req.body || {};
+    if (!resetToken) return res.status(400).json({ error: errMsg('resetTokenMissing', lang) });
+    if (!isValidPassword(password)) return res.status(400).json({ error: errMsg('passwordInvalid', lang) });
+
+    let payload;
+    try {
+      payload = jwt.verify(resetToken, SESSION_SECRET);
+    } catch (e) {
+      return res.status(401).json({ error: errMsg('resetTokenExpired', lang) });
+    }
+    if (payload.purpose !== 'reset') return res.status(401).json({ error: errMsg('invalidRequest', lang) });
+
+    const user = await getUser(payload.phone);
+    if (!user) return res.status(404).json({ error: errMsg('resetUserNotFound', lang) });
+
+    user.passwordHash = bcrypt.hashSync(password, 10);
+    await upsertUser(user);
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('/api/auth/reset/save 오류:', e);
+    res.status(500).json({ error: errMsg('invalidRequest', req.body && req.body.lang) });
+  }
+});
+
+// Self-service account deletion (Google Play's account deletion policy expects an
+// in-app path when the app supports in-app account creation, in addition to the
+// public web page at /delete-account.html). Requires an active session AND the
+// current password, since this is irreversible.
+app.post('/api/auth/account/delete', authLimiter, requireAuth, async (req, res) => {
+  try {
+    const { password, lang } = req.body || {};
+    if (!password) return res.status(400).json({ error: errMsg('passwordRequired', lang) });
+    if (!bcrypt.compareSync(String(password), req.user.passwordHash)) {
+      return res.status(401).json({ error: errMsg('loginFailed', lang) });
+    }
+    await deleteUser(req.user.phone);
+    res.clearCookie(SESSION_COOKIE, { path: '/' });
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('/api/auth/account/delete 오류:', e);
+    res.status(500).json({ error: errMsg('invalidRequest', req.body && req.body.lang) });
+  }
+});
+
+/* ---------------- Claude API: palm / face photo reading ---------------- */
+const READING_PROMPTS = {
+  palm: {
+    ko: "당신은 전통 손금(수상학) 풀이 스타일을 재미로 재구성하는 콘텐츠 작가입니다. 제공된 손바닥 사진의 생명선·감정선·두뇌선 등 주요 손금의 특징을 관찰한 것처럼 묘사하며, 흥미롭고 따뜻한 톤으로 3~5문장의 총평을 한국어로 작성하세요. 이 콘텐츠는 재미를 위한 것이며 의학적·과학적 진단이 아니라는 전제를 항상 유지하고, 건강에 대한 단정적 진단이나 불안을 조장하는 표현은 쓰지 마세요.",
+    en: "You are a content writer who reimagines traditional palmistry as light entertainment. Describe the photographed palm's life/heart/head lines as if observing their traditional features, in a warm and engaging tone, in 3-5 sentences of English. Always keep the framing that this is entertainment only, not a medical or scientific diagnosis, and avoid definitive health claims or anxiety-inducing language.",
+  },
+  face: {
+    ko: "당신은 전통 관상학 풀이 스타일을 재미로 재구성하는 콘텐츠 작가입니다. 제공된 얼굴 사진에서 느껴지는 인상의 특징을 관찰한 것처럼 묘사하며, 흥미롭고 긍정적인 톤으로 3~5문장의 총평을 한국어로 작성하세요. 외모를 평가하거나 순위를 매기지 말고, 이 콘텐츠는 재미를 위한 것이며 의학적 진단이 아니라는 전제를 항상 유지하세요.",
+    en: "You are a content writer who reimagines traditional East Asian face reading as light entertainment. Describe the impression conveyed by the photographed face as if observing its traditional features, in a positive and engaging tone, in 3-5 sentences of English. Never rank or judge physical appearance, and always keep the framing that this is entertainment only, not a medical diagnosis.",
+  },
+};
+
+app.post('/api/analyze', requireAuth, async (req, res) => {
+  try {
+    const { type, base64, mediaType, lang } = req.body || {};
+    if (type !== 'palm' && type !== 'face') {
+      return res.status(400).json({ error: errMsg('unsupportedAnalyzeType', lang) });
+    }
+    if (!base64 || typeof base64 !== 'string') {
+      return res.status(400).json({ error: errMsg('noPhotoData', lang) });
+    }
+    if (!mediaType || !/^image\/(jpeg|png|webp|gif)$/i.test(mediaType)) {
+      return res.status(400).json({ error: errMsg('unsupportedImageType', lang) });
+    }
+    // Rough decoded-size guard (base64 is ~4/3 the size of the raw bytes).
+    if (base64.length > 9_000_000) {
+      return res.status(413).json({ error: errMsg('imageTooLarge', lang) });
     }
 
-    if (!isValidPillarInput(req.body)) {
-      return res.status(400).json({ error: msg('invalidPillars', lang) });
-    }
+    const language = lang === 'en' ? 'en' : 'ko';
+    const promptText = READING_PROMPTS[type][language];
 
-    const promptText = buildFortunePrompt(req.body, lang);
-
-    const anthropicResponse = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 700,
-        messages: [
-          {
-            role: 'user',
-            content: [{ type: 'text', text: promptText }],
-          },
-        ],
-      }),
+    const message = await anthropic.messages.create({
+      model: CLAUDE_MODEL,
+      max_tokens: 512,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
+            { type: 'text', text: promptText },
+          ],
+        },
+      ],
     });
 
-    if (!anthropicResponse.ok) {
-      const errBody = await anthropicResponse.text().catch(() => '');
-      console.error('Anthropic API error:', anthropicResponse.status, errBody);
-      return res.status(502).json({ error: msg('aiServerError', lang) });
-    }
-
-    const data = await anthropicResponse.json();
-    const rawText = (data.content || [])
-      .map((item) => (item.type === 'text' ? item.text : ''))
-      .filter(Boolean)
+    const resultText = (message.content || [])
+      .filter((block) => block.type === 'text')
+      .map((block) => block.text)
       .join('\n')
       .trim();
 
-    if (!rawText) {
-      return res.status(502).json({ error: msg('noAiResult', lang) });
+    if (!resultText) return res.status(502).json({ error: errMsg('noAiResult', lang) });
+    res.json({ result: resultText });
+  } catch (e) {
+    console.error('/api/analyze 오류:', e);
+    res.status(502).json({ error: errMsg('analyzeFailed', req.body && req.body.lang) });
+  }
+});
+
+/* ---------------- Claude API: today's saju-based fortune ---------------- */
+const FORTUNE_CATEGORIES = ['work', 'money', 'love', 'health'];
+
+const FORTUNE_TOOL = {
+  name: 'submit_fortune',
+  description: "Submit today's four-category Saju fortune reading.",
+  input_schema: {
+    type: 'object',
+    properties: {
+      items: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            category: { type: 'string', enum: FORTUNE_CATEGORIES },
+            text: { type: 'string' },
+          },
+          required: ['category', 'text'],
+        },
+      },
+    },
+    required: ['items'],
+  },
+};
+
+app.post('/api/fortune', requireAuth, async (req, res) => {
+  try {
+    const {
+      element, dayStem, dayBranch, yearStem, yearBranch,
+      monthStem, monthBranch, hourStem, hourBranch, lang,
+    } = req.body || {};
+    if (!element || !dayStem || !dayBranch) {
+      return res.status(400).json({ error: errMsg('invalidSajuData', lang) });
     }
 
-    let items;
-    try {
-      items = parseFortuneJson(rawText);
-    } catch (parseErr) {
-      console.error('운세 JSON 파싱 실패:', parseErr, rawText);
-      return res.status(502).json({ error: msg('fortuneParseFailed', lang) });
-    }
+    const language = lang === 'en' ? 'English' : 'Korean';
+    const hourPart = hourStem ? `, hour pillar ${hourStem}${hourBranch}` : ' (birth hour unknown)';
+    const promptText = `You write short, warm, entertainment-only daily fortunes based on traditional Korean Saju (Four Pillars). ` +
+      `Someone's day-master element is ${element}, with year pillar ${yearStem}${yearBranch}, month pillar ${monthStem}${monthBranch}, ` +
+      `day pillar ${dayStem}${dayBranch}${hourPart}. ` +
+      `Write today's fortune in ${language} for exactly these four categories: work (career/business), money, love, health. ` +
+      `Each entry should be 1-2 upbeat, concrete sentences, avoid medical claims or fatalistic/alarming language, and call the submit_fortune tool with the result.`;
 
-    if (items.length === 0) {
-      return res.status(502).json({ error: msg('noValidFortune', lang) });
-    }
+    const message = await anthropic.messages.create({
+      model: CLAUDE_MODEL,
+      max_tokens: 700,
+      tools: [FORTUNE_TOOL],
+      tool_choice: { type: 'tool', name: 'submit_fortune' },
+      messages: [{ role: 'user', content: promptText }],
+    });
 
-    res.json({ items });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: msg('serverError', lang) });
+    const toolUse = (message.content || []).find((block) => block.type === 'tool_use');
+    const items = toolUse && Array.isArray(toolUse.input && toolUse.input.items) ? toolUse.input.items : null;
+    if (!items) return res.status(502).json({ error: errMsg('noAiResult', lang) });
+
+    const cleaned = FORTUNE_CATEGORIES.map((cat) => {
+      const found = items.find((it) => it.category === cat);
+      return { category: cat, text: found && found.text ? String(found.text).trim() : '' };
+    }).filter((it) => it.text);
+
+    if (!cleaned.length) return res.status(502).json({ error: errMsg('noAiResult', lang) });
+    res.json({ items: cleaned });
+  } catch (e) {
+    console.error('/api/fortune 오류:', e);
+    res.status(502).json({ error: errMsg('fortuneFailed', req.body && req.body.lang) });
   }
 });
 
 app.get('/healthz', (req, res) => res.json({ ok: true }));
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`사주행운 서버 실행 중: http://localhost:${PORT}`);
-});
+initDb()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`사주행운 서버 실행 중: http://localhost:${PORT}`);
+    });
+  })
+  .catch((e) => {
+    console.error('데이터베이스 초기화 실패. DATABASE_URL이 올바른지 확인해 주세요:', e);
+    process.exit(1);
+  });
