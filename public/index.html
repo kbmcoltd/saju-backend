@@ -1023,12 +1023,42 @@ function isValidPassword(v){
 }
 
 /* ---------------- screens ---------------- */
-function showScreen(name){
+// suppressHistoryPush is true while we're reacting to a popstate event (back/forward
+// button) so that re-running showScreen() to paint the target screen doesn't push
+// yet another history entry on top of it.
+let suppressHistoryPush = false;
+
+function showScreen(name, opts){
+  opts = opts || {};
   ['signup','login','reset','home','birth','result','palm','face'].forEach(s=>{
     document.getElementById('screen-'+s).classList.toggle('hidden', s!==name);
   });
   window.scrollTo(0,0);
+
+  if(!suppressHistoryPush){
+    if(opts.replace){
+      history.replaceState({ screen:name }, '', '');
+    } else {
+      history.pushState({ screen:name }, '', '');
+    }
+  }
 }
+
+// Makes the device/browser back button step back through in-app screens instead
+// of immediately exiting the app (important for the Android TWA wrapper, where the
+// hardware/gesture back button fires this same event).
+window.addEventListener('popstate', function(e){
+  const screen = e.state && e.state.screen;
+  suppressHistoryPush = true;
+  if(screen){
+    showScreen(screen);
+  } else {
+    // No recorded screen (e.g. user went back past our first pushed entry) -
+    // land on home if logged in, otherwise the signup/login screen.
+    showScreen(currentUser ? 'home' : 'signup');
+  }
+  suppressHistoryPush = false;
+});
 
 /* ---------------- signup / login (credentials handled entirely by the backend) ---------------- */
 async function handleSignup(){
@@ -1083,7 +1113,7 @@ async function logout(){
   document.getElementById('li-phone').value='';
   document.getElementById('li-pw').value='';
   resetPasswordResetScreen();
-  showScreen('login');
+  showScreen('login', { replace:true });
 }
 
 // Self-service account deletion (in addition to the public /delete-account.html
@@ -1102,7 +1132,7 @@ async function handleDeleteAccount(){
   currentUser = null;
   alert(t('account.deleted'));
   resetPasswordResetScreen();
-  showScreen('login');
+  showScreen('login', { replace:true });
 }
 
 /* ---------------- password reset ----------------
@@ -1179,7 +1209,7 @@ async function enterAfterAuth(){
   document.getElementById('result-name-slot').textContent = currentUser.name;
   document.getElementById('palm-name-slot').textContent = currentUser.name;
   document.getElementById('face-name-slot').textContent = currentUser.name;
-  showScreen('home');
+  showScreen('home', { replace:true });
 }
 
 async function goToSaju(){
@@ -1972,7 +2002,7 @@ async function boot(){
   }catch(e){
     // Not logged in / session expired - fall through to the signup screen.
   }
-  showScreen('signup');
+  showScreen('signup', { replace:true });
 }
 boot();
 </script>
