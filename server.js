@@ -307,12 +307,12 @@ app.post('/api/auth/account/delete', authLimiter, requireAuth, async (req, res) 
 /* ---------------- Claude API: palm / face photo reading ---------------- */
 const READING_PROMPTS = {
   palm: {
-    ko: "당신은 전통 손금(수상학) 풀이 스타일을 재미로 재구성하는 콘텐츠 작가입니다. 제공된 손바닥 사진의 생명선·감정선·두뇌선 등 주요 손금의 특징을 관찰한 것처럼 묘사하며, 흥미롭고 따뜻한 톤으로 3~5문장의 총평을 한국어로 작성하세요. 이 콘텐츠는 재미를 위한 것이며 의학적·과학적 진단이 아니라는 전제를 항상 유지하고, 건강에 대한 단정적 진단이나 불안을 조장하는 표현은 쓰지 마세요.",
-    en: "You are a content writer who reimagines traditional palmistry as light entertainment. Describe the photographed palm's life/heart/head lines as if observing their traditional features, in a warm and engaging tone, in 3-5 sentences of English. Always keep the framing that this is entertainment only, not a medical or scientific diagnosis, and avoid definitive health claims or anxiety-inducing language.",
+    ko: "당신은 전통 손금(수상학) 풀이 스타일을 재미로 재구성하는 콘텐츠 작가입니다. 제공된 손바닥 사진의 생명선·감정선·두뇌선·운명선 등 주요 손금의 특징을 관찰한 것처럼 묘사하세요. 좋은 말만 하지 말고, 반드시 좋은 점과 조심할 점을 균형 있게 함께 풀이해야 합니다. 아래 형식 그대로, 마크다운 기호(*, #, - 등) 없이 일반 텍스트로 작성하세요.\n\n✨ 좋은 점\n(타고난 강점과 좋은 흐름을 2~3문장)\n\n⚠️ 조심할 점\n(성향상 주의할 점, 조심하면 좋을 시기나 상황, 생활 속 대비 팁을 2~3문장)\n\n조심할 점은 불안을 주는 단정이 아니라 미리 대비하라는 부드럽고 현실적인 조언 톤으로 쓰세요. 이 콘텐츠는 재미를 위한 것이며 의학적·과학적 진단이 아니라는 전제를 유지하고, 질병·사고·죽음·이별 등을 단정적으로 예언하거나 건강 진단처럼 말하지 마세요. 한국어로 작성하세요.",
+    en: "You are a content writer who reimagines traditional palmistry as light entertainment. Describe the photographed palm's life, heart, head and fate lines as if observing their traditional features. Do not give only flattering remarks: you must give a balanced reading with both good points and things to watch out for. Use exactly the format below, as plain text with no markdown symbols (*, #, - etc.).\n\n✨ Good Points\n(2-3 sentences on natural strengths and favorable tendencies)\n\n⚠️ Things to Watch Out For\n(2-3 sentences on tendencies to be careful about, situations or times to take care, and practical tips to prepare)\n\nWrite the cautions as gentle, practical advice for preparing ahead, never as anxiety-inducing predictions. Always keep the framing that this is entertainment only, not a medical or scientific diagnosis, and never predict illness, accidents, death or breakups as certainties or speak as if giving a health diagnosis. Write in English.",
   },
   face: {
-    ko: "당신은 전통 관상학 풀이 스타일을 재미로 재구성하는 콘텐츠 작가입니다. 제공된 얼굴 사진에서 느껴지는 인상의 특징을 관찰한 것처럼 묘사하며, 흥미롭고 긍정적인 톤으로 3~5문장의 총평을 한국어로 작성하세요. 외모를 평가하거나 순위를 매기지 말고, 이 콘텐츠는 재미를 위한 것이며 의학적 진단이 아니라는 전제를 항상 유지하세요.",
-    en: "You are a content writer who reimagines traditional East Asian face reading as light entertainment. Describe the impression conveyed by the photographed face as if observing its traditional features, in a positive and engaging tone, in 3-5 sentences of English. Never rank or judge physical appearance, and always keep the framing that this is entertainment only, not a medical diagnosis.",
+    ko: "당신은 전통 관상학 풀이 스타일을 재미로 재구성하는 콘텐츠 작가입니다. 제공된 얼굴 사진에서 느껴지는 인상(이마·눈·코·입·턱 등)의 전통적 특징을 관찰한 것처럼 묘사하세요. 좋은 말만 하지 말고, 반드시 좋은 점과 조심할 점을 균형 있게 함께 풀이해야 합니다. 아래 형식 그대로, 마크다운 기호(*, #, - 등) 없이 일반 텍스트로 작성하세요.\n\n✨ 좋은 점\n(전통 관상에서 좋게 보는 인상과 타고난 강점을 2~3문장)\n\n⚠️ 조심할 점\n(전통 관상에서 시사하는 성향·행동 습관 측면의 주의점과 대비 팁을 2~3문장)\n\n조심할 점은 얼굴 생김새에 대한 평가나 단점 지적이 아니라 성향과 생활 습관에 대한 부드러운 조언으로만 쓰세요(예: 성급함, 고집, 과로하기 쉬운 경향). 외모를 평가하거나 순위를 매기거나 비하하지 마세요. 이 콘텐츠는 재미를 위한 것이며 의학적 진단이 아니라는 전제를 유지하고, 질병이나 불행을 단정적으로 예언하지 마세요. 한국어로 작성하세요.",
+    en: "You are a content writer who reimagines traditional East Asian face reading as light entertainment. Describe the impression conveyed by the photographed face (forehead, eyes, nose, mouth, chin, etc.) as if observing its traditional features. Do not give only flattering remarks: you must give a balanced reading with both good points and things to watch out for. Use exactly the format below, as plain text with no markdown symbols (*, #, - etc.).\n\n✨ Good Points\n(2-3 sentences on impressions traditionally seen as favorable and natural strengths)\n\n⚠️ Things to Watch Out For\n(2-3 sentences on tendencies and habits the tradition associates with this impression, with practical tips to prepare)\n\nWrite the cautions only as gentle advice about temperament and habits (for example haste, stubbornness, a tendency to overwork), never as criticism of how the face looks. Never rank, judge or disparage physical appearance. Always keep the framing that this is entertainment only, not a medical diagnosis, and never predict illness or misfortune as a certainty. Write in English.",
   },
 };
 
@@ -338,7 +338,7 @@ app.post('/api/analyze', requireAuth, async (req, res) => {
 
     const message = await anthropic.messages.create({
       model: CLAUDE_MODEL,
-      max_tokens: 512,
+      max_tokens: 1000, // two sections (good points + cautions) need more room than the old 3-5 sentence summary
       messages: [
         {
           role: 'user',
@@ -394,6 +394,7 @@ app.post('/api/fortune', requireAuth, async (req, res) => {
     const {
       element, dayStem, dayBranch, yearStem, yearBranch,
       monthStem, monthBranch, hourStem, hourBranch, lang,
+      todayKey, todayStem, todayBranch,
     } = req.body || {};
     if (!element || !dayStem || !dayBranch) {
       return res.status(400).json({ error: errMsg('invalidSajuData', lang) });
@@ -401,10 +402,32 @@ app.post('/api/fortune', requireAuth, async (req, res) => {
 
     const language = lang === 'en' ? 'English' : 'Korean';
     const hourPart = hourStem ? `, hour pillar ${hourStem}${hourBranch}` : ' (birth hour unknown)';
+
+    // Today's date: use the client's local date when it is a well-formed Y-M-D (so it
+    // matches the date the user sees), otherwise fall back to today in Korea time.
+    // The value is only ever interpolated after this strict pattern check, so a
+    // crafted request cannot slip free text into the prompt.
+    let todayText;
+    const keyMatch = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(String(todayKey || ''));
+    if (keyMatch && Number(keyMatch[2]) >= 1 && Number(keyMatch[2]) <= 12 && Number(keyMatch[3]) >= 1 && Number(keyMatch[3]) <= 31) {
+      todayText = `${keyMatch[1]}-${String(keyMatch[2]).padStart(2, '0')}-${String(keyMatch[3]).padStart(2, '0')}`;
+    } else {
+      todayText = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(new Date()); // YYYY-MM-DD
+    }
+    // Today's own day pillar (일진). Only accepted if both characters are real
+    // Heavenly Stem / Earthly Branch characters.
+    const STEM_SET = ['갑', '을', '병', '정', '무', '기', '경', '신', '임', '계'];
+    const BRANCH_SET = ['자', '축', '인', '묘', '진', '사', '오', '미', '신', '유', '술', '해'];
+    const todayPillarPart = (STEM_SET.includes(todayStem) && BRANCH_SET.includes(todayBranch))
+      ? ` Today's own day pillar (일진) is ${todayStem}${todayBranch}; read how it interacts with this person's day master ${dayStem}${dayBranch} (generating, controlling, clashing or harmonizing).`
+      : '';
+
     const promptText = `You write short, warm, entertainment-only daily fortunes based on traditional Korean Saju (Four Pillars). ` +
       `Someone's day-master element is ${element}, with year pillar ${yearStem}${yearBranch}, month pillar ${monthStem}${monthBranch}, ` +
       `day pillar ${dayStem}${dayBranch}${hourPart}. ` +
-      `Write today's fortune in ${language} for exactly these four categories: work (career/business), money, love, health. ` +
+      `Today's date is ${todayText}.${todayPillarPart} ` +
+      `Write the fortune for this specific date in ${language} for exactly these four categories: work (career/business), money, love, health. ` +
+      `Make it specific to today so that it clearly differs from the reading for other days; do not write generic advice that would fit any day. ` +
       `Each entry should be 1-2 upbeat, concrete sentences, avoid medical claims or fatalistic/alarming language, and call the submit_fortune tool with the result.`;
 
     const message = await anthropic.messages.create({
