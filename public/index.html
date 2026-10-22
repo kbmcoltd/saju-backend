@@ -406,6 +406,54 @@
     color:var(--muted);
     margin-top:12px;
   }
+  /* balanced reading: good flow + things to watch out for */
+  .fortune-good{
+    font-size:13px;
+    line-height:1.65;
+    color:#3a3846;
+  }
+  .fortune-caution{
+    margin-top:7px;
+    padding:8px 10px;
+    border-radius:8px;
+    background:rgba(196,69,54,.07);
+    border:1px solid rgba(196,69,54,.2);
+    color:#7a3128;
+    font-size:12.5px;
+    line-height:1.6;
+  }
+  .fortune-caution b{ font-weight:700; }
+  .period-summary{
+    border-radius:10px;
+    padding:10px 12px;
+    margin-bottom:12px;
+    font-size:13px;
+    line-height:1.65;
+  }
+  .period-summary.good{
+    background:rgba(154,106,30,.08);
+    border:1px solid rgba(154,106,30,.22);
+    color:#3a3846;
+  }
+  .period-summary .ps-label{
+    font-family:'Noto Serif KR',serif;
+    font-weight:700;
+    font-size:12.5px;
+    margin-bottom:3px;
+    color:#9a6a1e;
+  }
+  .period-summary.caution{
+    background:rgba(196,69,54,.07);
+    border:1px solid rgba(196,69,54,.2);
+    color:#7a3128;
+  }
+  .period-summary.caution .ps-label{ color:#a63a2e; }
+  .period-note{
+    font-size:11px;
+    color:var(--muted);
+    margin-top:10px;
+    line-height:1.55;
+  }
 
   .top-actions{
     display:flex;
@@ -707,6 +755,23 @@
     </div>
 
     <div class="card card-light">
+      <h2 data-i18n="result.month.title">이달의 사주 운세</h2>
+      <div id="month-tag-wrap"></div>
+      <div id="month-summary"></div>
+      <div class="fortune-items" id="month-items"></div>
+      <div class="fortune-date" id="month-date"></div>
+    </div>
+
+    <div class="card card-light">
+      <h2 data-i18n="result.year.title">올해의 사주 운세</h2>
+      <div id="year-tag-wrap"></div>
+      <div id="year-summary"></div>
+      <div class="fortune-items" id="year-items"></div>
+      <div class="fortune-date" id="year-date"></div>
+      <div class="period-note" data-i18n="result.period.note">좋은 흐름과 조심할 점을 함께 보여드려요. 조심할 점은 불안을 주려는 게 아니라 미리 대비하라는 참고 신호예요.</div>
+    </div>
+
+    <div class="card card-light">
       <h2 data-i18n="result.lucky.title">행운의 숫자 10</h2>
       <p class="desc" data-i18n="result.lucky.desc">사주 여덟 글자의 기운으로 뽑은 오늘의 행운 숫자예요.</p>
       <div class="ball-grid" id="lucky10-wrap"></div>
@@ -851,6 +916,13 @@ const TRANSLATIONS = {
   'birth.submit': { ko: '사주 풀이 보기', en: 'See My Saju Reading' },
   'result.pillars.title': { ko: '사주팔자 (四柱八字)', en: 'Saju (Four Pillars)' },
   'result.fortune.title': { ko: '오늘의 사주 운세', en: "Today's Fortune" },
+  'result.month.title': { ko: '이달의 사주 운세', en: "This Month's Fortune" },
+  'result.year.title': { ko: '올해의 사주 운세', en: "This Year's Fortune" },
+  'result.period.note': { ko: '좋은 흐름과 조심할 점을 함께 보여드려요. 조심할 점은 불안을 주려는 게 아니라 미리 대비하라는 참고 신호예요.', en: 'We show both the good flow and the things to watch out for. Cautions are gentle heads-ups to prepare, not predictions to worry about.' },
+  'fortune.summary.good': { ko: '✨ 좋은 흐름', en: '✨ Good Flow' },
+  'fortune.summary.caution': { ko: '⚠️ 조심할 점', en: '⚠️ Watch Out For' },
+  'fortune.caution.prefix': { ko: '조심', en: 'Caution' },
+  'fortune.todayCaution': { ko: '⚠️ 오늘의 주의사항', en: "⚠️ Today's Cautions" },
   'result.lucky.title': { ko: '행운의 숫자 10', en: '10 Lucky Numbers' },
   'result.lucky.desc': { ko: '사주 여덟 글자의 기운으로 뽑은 오늘의 행운 숫자예요.', en: "Today's lucky numbers, drawn from the energy of your eight Saju characters." },
   'result.sets.title': { ko: '추천 조합 5세트', en: '5 Recommended Combinations' },
@@ -1655,6 +1727,187 @@ function getFallbackFortune(user, element, dayStem, todayKey){
   });
 }
 
+/* ---------------- balanced reading: today / this month / this year ----------------
+   Each period (오늘=일진, 이달=월운, 올해=세운) is read the same way: take that period's
+   heavenly stem, work out its relationship to the user's own day stem (십성, ten gods),
+   and show BOTH the favorable flow and the things to watch out for. Everything here is
+   computed locally and deterministically, so it needs no backend call and changes
+   naturally with the date. Texts are written period-neutral ("이 시기") so the same table
+   serves day, month and year - the card title supplies the period. */
+const SIPSUNG_KEYS = ['비견','겁재','식신','상관','편재','정재','편관','정관','편인','정인'];
+const SIPSUNG_HANJA = {
+  '비견':'比肩','겁재':'劫財','식신':'食神','상관':'傷官','편재':'偏財',
+  '정재':'正財','편관':'偏官','정관':'正官','편인':'偏印','정인':'正印'
+};
+const SIPSUNG_EN = {
+  '비견':'Parallel','겁재':'Rival','식신':'Expression','상관':'Creativity','편재':'Fluid Wealth',
+  '정재':'Steady Wealth','편관':'Pressure','정관':'Authority','편인':'Intuition','정인':'Support'
+};
+
+// Relationship of a target stem to the user's day stem -> one of the ten gods.
+// Stems pair up by element (갑을=목, 병정=화, 무기=토, 경신=금, 임계=수) and alternate
+// yang/yin by index parity. Element cycle: 목→화→토→금→수→목.
+function getSipsung(dayStemIdx, targetStemIdx){
+  const de = Math.floor(dayStemIdx/2), te = Math.floor(targetStemIdx/2);
+  const samePolarity = (dayStemIdx%2) === (targetStemIdx%2);
+  const rel = (((te-de)%5)+5)%5; // 0 비겁, 1 식상, 2 재성, 3 관성, 4 인성
+  return SIPSUNG_KEYS[rel*2 + (samePolarity ? 0 : 1)];
+}
+
+const SIPSUNG_TEXTS = {
+  '비견': {
+    good: '자신감과 독립심이 커지는 시기예요. 주관을 뚜렷이 세우고 스스로 길을 개척하기에 좋습니다.',
+    caution: '고집이 세지고 경쟁자나 동업자와 부딪히기 쉬워요. 양보와 협의를 의식적으로 챙기세요.',
+    work:   { good:'동료·파트너와 어깨를 나란히 하며 주도적으로 일을 밀고 나가기 좋아요.', caution:'독단적으로 밀어붙이면 협업에서 마찰이 생길 수 있어요. 의견 조율에 시간을 쓰세요.' },
+    money:  { good:'꾸준히 모아온 힘이 버팀목이 되어 큰 흔들림 없이 재정을 지킬 수 있어요.', caution:'친구·지인 부탁으로 보증을 서거나 돈을 빌려주는 일은 재물이 새기 쉬우니 신중하세요.' },
+    love:   { good:'서로 대등하고 편안한 관계가 잘 맞는 시기예요. 친구 같은 인연에 끌릴 수 있어요.', caution:'자존심 싸움으로 사소한 일이 커질 수 있어요. 이기려는 마음을 내려놓으세요.' },
+    health: { good:'체력과 의지가 받쳐줘서 운동 습관을 만들기 좋아요.', caution:'자신을 과신해 무리하면 근육·관절에 부담이 올 수 있어요.' }
+  },
+  '겁재': {
+    good: '추진력과 승부욕이 살아나 도전하기에 힘이 붙는 시기예요.',
+    caution: '지출과 경쟁이 커지기 쉬운 때예요. 충동적인 결정과 사람 사이의 금전 거래를 특히 조심하세요.',
+    work:   { good:'경쟁 구도에서 오히려 실력이 드러나 존재감을 보여줄 기회가 있어요.', caution:'동업자·경쟁자와의 의견 충돌로 일이 꼬일 수 있어요. 계약과 역할 분담을 분명히 하세요.' },
+    money:  { good:'적극적으로 움직이면 수입 기회가 늘어날 수 있어요.', caution:'들어오는 만큼 나가기 쉬운 흐름이에요. 투기성 투자, 보증, 큰 지출은 한 박자 늦추세요.' },
+    love:   { good:'열정적이고 적극적인 만남의 기운이 있어요.', caution:'질투와 경쟁, 삼각관계 등 감정 소모가 생기기 쉬워요. 감정에 휘둘려 결론 내지 마세요.' },
+    health: { good:'활력이 높아 몸을 쓰는 활동으로 스트레스를 풀기 좋아요.', caution:'과로·과음·무리한 승부는 부상이나 탈진으로 이어질 수 있어요.' }
+  },
+  '식신': {
+    good: '여유롭고 표현력이 풍부해지며 재능이 자연스럽게 빛나는 시기예요.',
+    caution: '마음이 느슨해지기 쉬워요. 게으름, 과식·과음, 일을 미루는 습관을 조심하세요.',
+    work:   { good:'아이디어와 실력이 인정받고 꾸준한 성과가 쌓이기 좋아요.', caution:'편안함에 안주하면 마감이 늦어질 수 있어요. 일정을 스스로 점검하세요.' },
+    money:  { good:'재능을 살린 수입이나 부수입 기회가 자연스럽게 생길 수 있어요.', caution:'먹고 즐기는 데 쓰는 지출이 늘기 쉬워요. 작은 소비가 쌓이지 않게 살피세요.' },
+    love:   { good:'다정하고 편안한 분위기라 관계가 부드럽게 풀려요.', caution:'너무 느긋하면 상대가 무관심으로 느낄 수 있어요. 표현을 게을리하지 마세요.' },
+    health: { good:'마음이 편안해 컨디션이 안정되는 시기예요.', caution:'식욕이 늘기 쉬워 체중과 소화기 관리에 신경 쓰세요.' }
+  },
+  '상관': {
+    good: '재능과 창의력이 폭발해 새로운 시도와 표현에 힘이 실려요.',
+    caution: '말과 행동이 날카로워져 구설이나 윗사람과의 마찰이 생기기 쉬워요.',
+    work:   { good:'기획·창작·기술 분야에서 독창성으로 두각을 나타낼 수 있어요.', caution:'직설적인 비판이나 불만 표출이 평판에 영향을 줄 수 있어요. 이직·퇴사 같은 결정은 서두르지 마세요.' },
+    money:  { good:'기술과 아이디어로 수익을 만드는 길이 열릴 수 있어요.', caution:'수입이 불규칙해지고 충동적인 지출이나 투자 실수가 나기 쉬워요.' },
+    love:   { good:'재치와 매력이 돋보여 이성에게 인기가 오를 수 있어요.', caution:'말 한마디로 상처를 주거나 오해를 낳기 쉬워요. 화가 날 땐 바로 말하지 마세요.' },
+    health: { good:'창작이나 취미 활동이 스트레스 해소에 도움이 돼요.', caution:'신경이 예민해져 불면·두통이 생기기 쉬우니 충분히 쉬세요.' }
+  },
+  '편재': {
+    good: '활동 범위가 넓어지고 사업·투자 기회가 눈에 띄는 시기예요.',
+    caution: '욕심이 앞서 일을 벌이다 수습이 어려워질 수 있어요. 규모를 감당 가능한 선으로 지키세요.',
+    work:   { good:'영업·사업·대외 활동에서 성과가 나기 좋아요.', caution:'일을 너무 벌려 놓으면 마무리가 흐트러져요. 우선순위를 정하세요.' },
+    money:  { good:'돈의 움직임이 활발해 수입 기회가 늘어요.', caution:'들어오는 만큼 나가기도 쉽고, 한 번에 큰 이익을 노린 투자는 손실 위험이 있어요.' },
+    love:   { good:'사교 범위가 넓어져 새로운 인연을 만날 기회가 많아요.', caution:'한눈팔기 쉬운 흐름이에요. 관계에서 신뢰를 지키는 데 신경 쓰세요.' },
+    health: { good:'활동량이 늘어 몸이 가벼워지는 느낌을 받을 수 있어요.', caution:'바쁜 일정 탓에 식사와 수면이 불규칙해지기 쉬워요.' }
+  },
+  '정재': {
+    good: '성실하게 쌓은 노력이 안정적인 결실로 돌아오는 시기예요.',
+    caution: '지나치게 안전만 찾다가 기회를 놓치거나, 작은 손해에 예민해지기 쉬워요.',
+    work:   { good:'맡은 일을 꼼꼼히 해내 신뢰를 얻고 안정적으로 자리잡기 좋아요.', caution:'변화에 소극적이 되어 일이 정체된 느낌이 들 수 있어요. 작은 개선부터 시도해 보세요.' },
+    money:  { good:'월급이나 고정 수입 같은 안정적인 재물운이 따라요.', caution:'아끼는 데만 치중하면 꼭 필요한 투자를 놓칠 수 있어요. 계약서와 세부 조건 확인은 꼼꼼히 하세요.' },
+    love:   { good:'성실하고 믿음직한 만남, 결혼 이야기가 오가기 좋은 시기예요.', caution:'현실적인 조건을 따지다 마음이 식을 수 있어요. 감정 표현도 챙기세요.' },
+    health: { good:'규칙적인 생활로 컨디션이 안정돼요.', caution:'꾸준함 때문에 피로를 알아채지 못할 수 있어요. 정기 점검을 받아 보세요.' }
+  },
+  '편관': {
+    good: '강한 책임감과 돌파력이 생겨 어려운 일을 해내는 힘이 커지는 시기예요.',
+    caution: '압박과 긴장, 돌발 변수가 늘 수 있어요. 무리한 일정, 다툼, 사고에 특히 조심하세요.',
+    work:   { good:'어려운 과제를 맡아 해내면 실력을 크게 인정받을 수 있어요.', caution:'상사나 조직의 압박, 갑작스러운 업무 변동이 있을 수 있어요. 약속과 지시는 기록으로 남겨두세요.' },
+    money:  { good:'위기를 정면 돌파하면 보상이 따를 수 있어요.', caution:'예상치 못한 지출(수리비·벌금·병원비 등)에 대비해 비상금을 확보해 두세요.' },
+    love:   { good:'강렬하게 끌리는 인연이 나타날 수 있어요.', caution:'관계에서 긴장과 갈등이 커지기 쉬워요. 상대를 몰아붙이지 마세요.' },
+    health: { good:'정신력이 강해져 힘든 시기를 잘 버텨요.', caution:'과로·스트레스·부상 위험이 올라가요. 운전과 운동할 때 안전에 유의하세요.' }
+  },
+  '정관': {
+    good: '명예와 신뢰가 오르고 안정된 지위를 얻기 좋은 시기예요.',
+    caution: '체면과 규칙에 얽매여 스스로를 압박하기 쉬워요.',
+    work:   { good:'승진·합격·인정 등 공식적인 평가에서 좋은 결과를 기대할 수 있어요.', caution:'책임이 늘어 부담이 커질 수 있어요. 완벽을 고집해 지치지 않도록 속도를 조절하세요.' },
+    money:  { good:'정당하고 정직한 방식의 수입이 안정적으로 이어져요.', caution:'규정·세금·계약 문제를 놓치면 불이익이 생길 수 있어요. 서류를 꼼꼼히 챙기세요.' },
+    love:   { good:'진지하고 책임감 있는 만남이 이어지기 좋아요.', caution:'체면과 조건에 얽매여 마음을 솔직히 표현하지 못할 수 있어요.' },
+    health: { good:'규칙적인 생활이 건강을 지켜줘요.', caution:'긴장과 책임감 때문에 어깨·목 결림이나 소화 문제가 생기기 쉬워요.' }
+  },
+  '편인': {
+    good: '직관과 독창적인 아이디어가 살아나고, 특별한 공부나 기술을 익히기 좋은 시기예요.',
+    caution: '생각이 많아지고 혼자 고립되기 쉬워요. 의심과 걱정에 갇히지 않도록 주의하세요.',
+    work:   { good:'전문 분야나 새로운 기술을 깊이 파고들면 성과가 나요.', caution:'계획만 세우다 실행이 늦어지거나 변덕으로 방향이 자주 바뀔 수 있어요.' },
+    money:  { good:'배움과 자격에 투자한 것이 나중에 수입으로 돌아올 수 있어요.', caution:'수입이 일정하지 않을 수 있어요. 불확실한 사업이나 투자는 한 번 더 검증하세요.' },
+    love:   { good:'깊이 있는 대화가 통하는 사람에게 끌려요.', caution:'마음을 닫거나 혼자 속앓이하기 쉬워요. 감정을 말로 표현해 보세요.' },
+    health: { good:'명상이나 휴식 같은 조용한 활동이 회복에 좋아요.', caution:'불면, 소화불량, 가라앉는 기분 등 마음에서 오는 피로를 조심하세요.' }
+  },
+  '정인': {
+    good: '귀인의 도움과 배움의 기회가 따르고 마음이 든든해지는 시기예요.',
+    caution: '의존적이 되거나 결정을 미루기 쉬워요. 남의 도움만 기다리지 마세요.',
+    work:   { good:'자격·시험·문서 업무에 유리하고 윗사람의 지원을 받을 수 있어요.', caution:'신중함이 지나쳐 기회를 놓칠 수 있어요. 준비가 됐다면 실행에 옮기세요.' },
+    money:  { good:'문서·계약·부동산 관련으로 안정적인 이익을 기대할 수 있어요.', caution:'움직임이 느려 수익 기회를 놓치기 쉬워요. 서류 확인은 꼼꼼히 하세요.' },
+    love:   { good:'따뜻하고 헌신적인 마음을 주고받는 인연이 이어져요.', caution:'지나친 배려나 의존이 관계를 무겁게 만들 수 있어요.' },
+    health: { good:'마음이 안정되고 회복력이 좋아요.', caution:'활동량이 줄어 몸이 무거워지기 쉬워요. 가볍게라도 움직이세요.' }
+  }
+};
+
+// English mode shows a shorter version: one good-flow line and one caution line per
+// ten-god, rather than machine-translating all the per-category Korean sentences.
+const SIPSUNG_TEXTS_EN = {
+  '비견': { good:'Self-confidence and independence grow. A good time to set your own direction.', caution:'Stubbornness and friction with rivals or partners are likely. Make room for compromise.' },
+  '겁재': { good:'Drive and competitive spirit give you the push to take on challenges.', caution:'Spending and rivalry run high. Be careful with impulsive choices and money between people.' },
+  '식신': { good:'You feel relaxed and expressive, and your talents shine naturally.', caution:'Things may loosen up too much. Watch for laziness, overeating and procrastination.' },
+  '상관': { good:'Creativity surges and bold new ideas get real momentum.', caution:'Words can turn sharp, causing friction with authority or gossip. Think before you speak.' },
+  '편재': { good:'Your range of activity widens and business or investment chances stand out.', caution:'Greed can lead you to overextend. Keep your plans to a size you can handle.' },
+  '정재': { good:'Steady effort turns into stable, reliable results.', caution:'Playing it too safe can mean missed chances. Do check contracts and details carefully.' },
+  '편관': { good:'Strong responsibility and breakthrough power help you get hard things done.', caution:'Pressure, tension and surprises may rise. Take care with overwork, quarrels and safety.' },
+  '정관': { good:'Reputation and trust rise, favoring recognition and a stable position.', caution:'Worry about appearances and rules can make you press yourself too hard.' },
+  '편인': { good:'Intuition and original ideas awaken; good for learning something special.', caution:'Overthinking and isolation come easily. Do not get trapped in doubt and worry.' },
+  '정인': { good:'Helpful people and learning opportunities appear, and you feel supported.', caution:'You may lean on others or put off decisions. Do not just wait for help.' }
+};
+
+// Branch relations between a period's branch and the user's own day branch (일지).
+// 충(clash): branches six apart. 합(harmony): the six traditional pairs, whose indices sum to 1 mod 12.
+function getBranchRelation(periodBranchIdx, dayBranchIdx){
+  if(((periodBranchIdx - dayBranchIdx) % 12 + 12) % 12 === 6) return 'clash';
+  if((periodBranchIdx + dayBranchIdx) % 12 === 1) return 'harmony';
+  return null;
+}
+const BRANCH_NOTE = {
+  clash: {
+    ko: '이 시기의 지지가 내 일지와 충(沖)을 이뤄 환경이나 관계, 이동·변동이 생기기 쉬워요. 큰 결정은 한 번 더 살피고, 이동 중에는 안전에 신경 쓰세요.',
+    en: "This period's branch clashes with your day branch, so changes in environment, relationships or travel are likely. Double-check big decisions and stay careful when moving around."
+  },
+  harmony: {
+    ko: '이 시기의 지지가 내 일지와 합(合)을 이뤄 주변과 조화롭고 협력·귀인의 도움을 받기 쉬워요.',
+    en: "This period's branch harmonizes with your day branch, favoring cooperation and help from others."
+  }
+};
+
+// Builds the full balanced reading for a period pillar ({stemIdx, branchIdx, ...}).
+function buildPeriodReading(saju, pillar){
+  const sip = getSipsung(saju.day.stemIdx, pillar.stemIdx);
+  const rel = getBranchRelation(pillar.branchIdx, saju.day.branchIdx);
+  const ko = SIPSUNG_TEXTS[sip];
+  const en = SIPSUNG_TEXTS_EN[sip];
+  const isEn = currentLang==='en';
+  const cats = FORTUNE_CATEGORIES.map(cat=>({
+    category: cat,
+    label: fortuneCategoryLabel(cat),
+    icon: FORTUNE_CATEGORY_ICON[cat],
+    good: ko[cat].good,
+    caution: ko[cat].caution
+  }));
+  return {
+    pillar,
+    sipsung: sip,
+    sipsungLabel: isEn ? `${SIPSUNG_EN[sip]} (${SIPSUNG_HANJA[sip]})` : `${sip}(${SIPSUNG_HANJA[sip]})`,
+    summaryGood: isEn ? en.good : ko.good,
+    summaryCaution: isEn ? en.caution : ko.caution,
+    // Per-category lines are Korean-only; in English mode we show just the summaries.
+    cats: isEn ? [] : cats,
+    branchNote: rel ? { type: rel, text: BRANCH_NOTE[rel][isEn ? 'en' : 'ko'] } : null
+  };
+}
+
+function getPeriodPillars(){
+  const now = new Date();
+  const y = now.getFullYear(), m = now.getMonth()+1, d = now.getDate();
+  const yearP = getYearPillar(y);
+  return {
+    year: yearP,
+    month: getMonthPillar(y, m, yearP.stemIdx),
+    day: getDayPillar(y, m, d),
+    y, m, d
+  };
+}
+
 const FORTUNE_ENDPOINT = '/api/fortune';
 
 async function getTodaysFortune(user){
@@ -1821,19 +2074,101 @@ async function renderResult(){
     `<div class="fortune-item"><div class="fortune-item-text">${t('msg.loadingFortune')}</div></div>`;
   document.getElementById('fortune-date').textContent = '';
 
+  // This month's and this year's readings are computed locally, so show them right
+  // away instead of making them wait for the AI-generated daily text below.
+  const periods = getPeriodPillars();
+  const monthReading = buildPeriodReading(saju, periods.month);
+  const yearReading = buildPeriodReading(saju, periods.year);
+  const isEn = currentLang==='en';
+  renderPeriodCard('month', monthReading,
+    isEn ? `This Month · ${romanizePillar(periods.month)} · ${monthReading.sipsungLabel}`
+         : `이달의 기운 · ${periods.month.stem}${periods.month.branch}(${periods.month.stemHanja}${periods.month.branchHanja}) · ${monthReading.sipsungLabel}`,
+    isEn ? `As of ${periods.m}/${periods.y}` : `${periods.y}년 ${periods.m}월 기준`);
+  renderPeriodCard('year', yearReading,
+    isEn ? `This Year · ${romanizePillar(periods.year)} · ${yearReading.sipsungLabel}`
+         : `올해의 기운 · ${periods.year.stem}${periods.year.branch}(${periods.year.stemHanja}${periods.year.branchHanja})년 · ${yearReading.sipsungLabel}`,
+    isEn ? `As of ${periods.y}` : `${periods.y}년 기준`);
+
+  // Today's cautions come from the same ten-god reading, using today's day pillar.
+  const dayReading = buildPeriodReading(saju, periods.day);
+
   const fortune = await getTodaysFortune(currentUser);
   const fortuneTagText = currentLang==='en' ? `Today's Energy · ${elementLabel(fortune.element)}` : `오늘의 기운 · ${elementLabel(fortune.element)}`;
   document.getElementById('fortune-tag-wrap').innerHTML =
     `<span class="fortune-tag">${fortuneTagText}</span>`;
-  renderFortuneItems(fortune.items);
+  renderFortuneItems(fortune.items, dayReading);
   document.getElementById('fortune-date').textContent = fortune.dateLabel;
+}
+
+// Small DOM helpers: every string here is built with textContent, never innerHTML.
+function makeCautionEl(text, noPrefix){
+  const el = document.createElement('div');
+  el.className = 'fortune-caution';
+  if(!noPrefix){
+    const b = document.createElement('b');
+    b.textContent = `⚠️ ${t('fortune.caution.prefix')} `;
+    el.appendChild(b);
+  }
+  el.appendChild(document.createTextNode(text));
+  return el;
+}
+
+function makeSummaryEl(kind, text){
+  const box = document.createElement('div');
+  box.className = 'period-summary ' + kind;
+  const label = document.createElement('div');
+  label.className = 'ps-label';
+  label.textContent = t(kind==='good' ? 'fortune.summary.good' : 'fortune.summary.caution');
+  const body = document.createElement('div');
+  body.textContent = text;
+  box.append(label, body);
+  return box;
+}
+
+// Renders the monthly / yearly card: tag, two summaries (good + caution), then each
+// category with its favorable line followed by its caution line.
+function renderPeriodCard(prefix, reading, tagText, dateText){
+  const tagWrap = document.getElementById(prefix+'-tag-wrap');
+  tagWrap.innerHTML = '';
+  const tag = document.createElement('span');
+  tag.className = 'fortune-tag';
+  tag.textContent = tagText;
+  tagWrap.appendChild(tag);
+
+  const summary = document.getElementById(prefix+'-summary');
+  summary.innerHTML = '';
+  summary.append(makeSummaryEl('good', reading.summaryGood), makeSummaryEl('caution', reading.summaryCaution));
+
+  const items = document.getElementById(prefix+'-items');
+  items.innerHTML = '';
+  reading.cats.forEach(c=>{
+    const row = document.createElement('div');
+    row.className = 'fortune-item';
+    const label = document.createElement('div');
+    label.className = 'fortune-item-label';
+    label.textContent = `${c.icon} ${c.label}`;
+    const good = document.createElement('div');
+    good.className = 'fortune-good';
+    good.textContent = c.good;
+    row.append(label, good, makeCautionEl(c.caution));
+    items.appendChild(row);
+  });
+  if(reading.branchNote){
+    const row = document.createElement('div');
+    row.className = 'fortune-item';
+    row.appendChild(reading.branchNote.type==='clash'
+      ? makeCautionEl(reading.branchNote.text)
+      : Object.assign(document.createElement('div'), { className:'fortune-good', textContent:'🤝 ' + reading.branchNote.text }));
+    items.appendChild(row);
+  }
+  document.getElementById(prefix+'-date').textContent = dateText;
 }
 
 // item.text comes from the /api/fortune backend (an LLM response), so it is built
 // with textContent rather than innerHTML - an AI response that happens to contain
 // HTML must never be parsed as markup here. item.icon/label are developer-defined
 // constants and safe to treat as trusted.
-function renderFortuneItems(items){
+function renderFortuneItems(items, reading){
   const wrap = document.getElementById('fortune-items');
   wrap.innerHTML = '';
   items.forEach(item=>{
@@ -1849,8 +2184,26 @@ function renderFortuneItems(items){
     text.textContent = item.text;
 
     row.append(label, text);
+
+    // Locally computed counterpart to the (positive) AI text: what to watch out for
+    // today in this category, based on today's relationship to the user's day stem.
+    const c = reading && reading.cats.find(x=>x.category===item.category);
+    if(c) row.appendChild(makeCautionEl(c.caution));
+
     wrap.appendChild(row);
   });
+
+  if(reading){
+    const row = document.createElement('div');
+    row.className = 'fortune-item';
+    const label = document.createElement('div');
+    label.className = 'fortune-item-label';
+    label.textContent = t('fortune.todayCaution');
+    row.appendChild(label);
+    row.appendChild(makeCautionEl(reading.summaryCaution, true));
+    if(reading.branchNote && reading.branchNote.type==='clash') row.appendChild(makeCautionEl(reading.branchNote.text, true));
+    wrap.appendChild(row);
+  }
 }
 
 /* ---------------- palm / face photo reading ---------------- */
