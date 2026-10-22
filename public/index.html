@@ -377,6 +377,7 @@
     font-size:13.5px;
     line-height:1.75;
     color:#ece6d6;
+    white-space:pre-line; /* palm/face readings now come as two labelled sections separated by line breaks */
   }
   .fortune-items{
     display:flex;
@@ -1931,7 +1932,12 @@ async function getTodaysFortune(user){
   }
 
   const saju = user.saju;
+  // Today's own day pillar (일진) and date go to the server so the AI text is tied to
+  // this specific day instead of being generic for the person's saju.
+  const todayPillar = getDayPillar(now.getFullYear(), now.getMonth()+1, now.getDate());
   const payload = {
+    todayKey,
+    todayStem: todayPillar.stem, todayBranch: todayPillar.branch,
     element,
     dayStem, dayBranch: saju.day.branch,
     yearStem: saju.year.stem, yearBranch: saju.year.branch,
