@@ -364,12 +364,39 @@ app.post('/api/analyze', requireAuth, async (req, res) => {
   }
 });
 
-/* ---------------- Claude API: today's saju-based fortune ---------------- */
+/* ---------------- Claude API: saju-based fortune (today / this month / this year) ---------------- */
 const FORTUNE_CATEGORIES = ['work', 'money', 'love', 'health'];
 
-const FORTUNE_TOOL = {
+const STEM_SET = ['갑', '을', '병', '정', '무', '기', '경', '신', '임', '계'];
+const BRANCH_SET = ['자', '축', '인', '묘', '진', '사', '오', '미', '신', '유', '술', '해'];
+const ELEMENT_SET = ['목', '화', '토', '금', '수'];
+const POS_SET = ['year', 'month', 'day', 'hour'];
+const SIPSUNG_SET = ['비견', '겁재', '식신', '상관', '편재', '정재', '편관', '정관', '편인', '정인'];
+const STRENGTH_SET = ['strong', 'weak', 'balanced'];
+const RELATION_SET = ['clash', 'harmony', 'punish', 'stemHarmony', 'stemClash'];
+
+const POS_TEXT = {
+  year: 'year pillar (roots, ancestors, outer environment)',
+  month: 'month pillar (career, social life)',
+  day: 'day pillar (self, spouse, home)',
+  hour: 'hour pillar (children, later life, subordinates)',
+};
+const RELATION_TEXT = {
+  clash: "the period's branch CLASHES (충) with the person's {pos} branch {target}",
+  harmony: "the period's branch HARMONIZES (합) with the person's {pos} branch {target}",
+  punish: "the period's branch forms a PUNISHMENT (형) with the person's {pos} branch {target}",
+  stemHarmony: "the period's stem COMBINES (합) with the person's {pos} stem {target}",
+  stemClash: "the period's stem CLASHES (충) with the person's {pos} stem {target}",
+};
+const STRENGTH_TEXT = {
+  strong: 'strong (신강: the day master is well supported, tends toward stubbornness and excess)',
+  weak: 'gentle (신약: the day master is thinly supported, tends to tire and lean on others)',
+  balanced: 'balanced (중화)',
+};
+
+const DAY_FORTUNE_TOOL = {
   name: 'submit_fortune',
-  description: "Submit today's four-category Saju fortune reading.",
+  description: "Submit today's four-category Saju fortune reading, each with a good point and a caution.",
   input_schema: {
     type: 'object',
     properties: {
@@ -379,9 +406,10 @@ const FORTUNE_TOOL = {
           type: 'object',
           properties: {
             category: { type: 'string', enum: FORTUNE_CATEGORIES },
-            text: { type: 'string' },
+            text: { type: 'string', description: 'The favorable reading for this category.' },
+            caution: { type: 'string', description: 'What to watch out for in this category.' },
           },
-          required: ['category', 'text'],
+          required: ['category', 'text', 'caution'],
         },
       },
     },
@@ -389,66 +417,184 @@ const FORTUNE_TOOL = {
   },
 };
 
+const PERIOD_FORTUNE_TOOL = {
+  name: 'submit_period_fortune',
+  description: 'Submit a monthly or yearly Saju reading with good points and cautions.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      summaryGood: { type: 'string', description: 'Overall favorable flow, 1-2 sentences.' },
+      summaryCaution: { type: 'string', description: 'Overall things to watch out for, 1-2 sentences.' },
+      items: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            category: { type: 'string', enum: FORTUNE_CATEGORIES },
+            good: { type: 'string' },
+            caution: { type: 'string' },
+          },
+          required: ['category', 'good', 'caution'],
+        },
+      },
+    },
+    required: ['summaryGood', 'summaryCaution', 'items'],
+  },
+};
+
+// Everything from the request that reaches the prompt is checked against a fixed list or
+// is a bounded integer, so a crafted request cannot slip free text into the prompt.
+function pickFrom(set, v) {
+  return set.includes(v) ? v : null;
+}
+function cleanChartFacts(chart, period) {
+  const c = chart && typeof chart === 'object' ? chart : {};
+  const p = period && typeof period === 'object' ? period : {};
+  const counts = ELEMENT_SET.map((el) => {
+    const n = Number(c.elements && c.elements[el]);
+    return `${el} ${Number.isInteger(n) && n >= 0 && n <= 8 ? n : 0}`;
+  }).join(', ');
+  const strength = pickFrom(STRENGTH_SET, c.strength);
+  const lacking = (Array.isArray(c.lacking) ? c.lacking : []).filter((e) => ELEMENT_SET.includes(e)).slice(0, 5);
+  const excess = (Array.isArray(c.excess) ? c.excess : []).filter((e) => ELEMENT_SET.includes(e)).slice(0, 5);
+
+  const chartText =
+    `Element balance across the eight characters: ${counts}. ` +
+    (strength ? `The day master is ${STRENGTH_TEXT[strength]}. ` : '') +
+    `Lacking elements: ${lacking.length ? lacking.join(', ') : 'none'}. ` +
+    `Excessive elements (3 or more): ${excess.length ? excess.join(', ') : 'none'}.`;
+
+  const lines = [];
+  const sip = pickFrom(SIPSUNG_SET, p.sipsung);
+  if (sip) lines.push(`its stem is the "${sip}" ten god relative to the person's day master`);
+  (Array.isArray(p.relations) ? p.relations : []).slice(0, 8).forEach((r) => {
+    if (!r || !RELATION_SET.includes(r.type) || !POS_SET.includes(r.pos)) return;
+    const target = STEM_SET.includes(r.target) || BRANCH_SET.includes(r.target) ? r.target : '';
+    if (!target) return;
+    lines.push(RELATION_TEXT[r.type].replace('{pos}', POS_TEXT[r.pos]).replace('{target}', target));
+  });
+  const fills = (Array.isArray(p.fills) ? p.fills : []).filter((e) => ELEMENT_SET.includes(e));
+  const feeds = (Array.isArray(p.feeds) ? p.feeds : []).filter((e) => ELEMENT_SET.includes(e));
+  if (fills.length) lines.push(`it supplies the lacking element(s) ${fills.join(', ')}`);
+  if (feeds.length) lines.push(`it adds even more of the already excessive element(s) ${feeds.join(', ')}`);
+
+  return { chartText, periodText: lines.length ? lines.join('; ') + '.' : 'no special clash or harmony with the person\'s pillars.' };
+}
+
 app.post('/api/fortune', requireAuth, async (req, res) => {
   try {
     const {
-      element, dayStem, dayBranch, yearStem, yearBranch,
+      dayStem, dayBranch, yearStem, yearBranch,
       monthStem, monthBranch, hourStem, hourBranch, lang,
       todayKey, todayStem, todayBranch,
+      scope, periodYear, periodMonth, chart, period,
     } = req.body || {};
-    if (!element || !dayStem || !dayBranch) {
+    if (!STEM_SET.includes(dayStem) || !BRANCH_SET.includes(dayBranch)) {
       return res.status(400).json({ error: errMsg('invalidSajuData', lang) });
     }
+    const element = pickFrom(ELEMENT_SET, req.body.element) || '토';
+    const kind = scope === 'month' || scope === 'year' ? scope : 'day';
 
     const language = lang === 'en' ? 'English' : 'Korean';
-    const hourPart = hourStem ? `, hour pillar ${hourStem}${hourBranch}` : ' (birth hour unknown)';
+    const okStem = (s) => (STEM_SET.includes(s) ? s : '?');
+    const okBranch = (b) => (BRANCH_SET.includes(b) ? b : '?');
+    const hourPart = STEM_SET.includes(hourStem) && BRANCH_SET.includes(hourBranch)
+      ? `, hour pillar ${hourStem}${hourBranch}`
+      : ' (birth hour unknown)';
 
-    // Today's date: use the client's local date when it is a well-formed Y-M-D (so it
-    // matches the date the user sees), otherwise fall back to today in Korea time.
-    // The value is only ever interpolated after this strict pattern check, so a
-    // crafted request cannot slip free text into the prompt.
-    let todayText;
-    const keyMatch = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(String(todayKey || ''));
-    if (keyMatch && Number(keyMatch[2]) >= 1 && Number(keyMatch[2]) <= 12 && Number(keyMatch[3]) >= 1 && Number(keyMatch[3]) <= 31) {
-      todayText = `${keyMatch[1]}-${String(keyMatch[2]).padStart(2, '0')}-${String(keyMatch[3]).padStart(2, '0')}`;
+    const { chartText, periodText } = cleanChartFacts(chart, period);
+    const chartIntro =
+      `This person's chart: year pillar ${okStem(yearStem)}${okBranch(yearBranch)}, month pillar ${okStem(monthStem)}${okBranch(monthBranch)}, ` +
+      `day pillar ${dayStem}${dayBranch}${hourPart}; the day master's element is ${element}. ${chartText}`;
+
+    const personalize =
+      `Ground EVERY point in this person's own chart facts above and the period facts below, and say concretely what drives it ` +
+      `(for example the clash with their day branch, a lacking element being supplied, or a strong day master meeting more of the same energy). ` +
+      `Two people with different charts must get clearly different readings, so never write generic advice that would fit anyone. `;
+    const tone =
+      `Tone: warm, entertainment-only and constructive. Be honest about what to watch out for, but frame cautions as habits, timing and ` +
+      `choices to be careful with, never as fate. Do not make medical, illness, accident, death or lawsuit predictions. Call the tool with the result.`;
+
+    let promptText;
+    let tool;
+    let maxTokens;
+
+    if (kind === 'day') {
+      // Today's date: use the client's local date when it is a well-formed Y-M-D (so it
+      // matches the date the user sees), otherwise fall back to today in Korea time.
+      let todayText;
+      const keyMatch = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(String(todayKey || ''));
+      if (keyMatch && Number(keyMatch[2]) >= 1 && Number(keyMatch[2]) <= 12 && Number(keyMatch[3]) >= 1 && Number(keyMatch[3]) <= 31) {
+        todayText = `${keyMatch[1]}-${String(keyMatch[2]).padStart(2, '0')}-${String(keyMatch[3]).padStart(2, '0')}`;
+      } else {
+        todayText = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(new Date()); // YYYY-MM-DD
+      }
+      const todayPillar = STEM_SET.includes(todayStem) && BRANCH_SET.includes(todayBranch) ? `${todayStem}${todayBranch}` : null;
+
+      promptText =
+        `You write short, warm, entertainment-only daily fortunes based on traditional Korean Saju (Four Pillars). ${chartIntro} ` +
+        `Today's date is ${todayText}.${todayPillar ? ` Today's own day pillar (일진) is ${todayPillar}.` : ''} ` +
+        `How today's pillar meets this person's chart: ${periodText} ` +
+        `Write today's reading in ${language} for exactly these four categories: work (career/business), money, love, health. ` +
+        `For each category give "text" (the favorable side, 1-2 concrete sentences) and "caution" (what to watch out for today, 1 concrete sentence). ` +
+        personalize +
+        `Start from this person's chart (who they are), then let today's pillar decide what is highlighted today. ` + tone;
+      tool = DAY_FORTUNE_TOOL;
+      maxTokens = 1400;
     } else {
-      todayText = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(new Date()); // YYYY-MM-DD
-    }
-    // Today's own day pillar (일진). Only accepted if both characters are real
-    // Heavenly Stem / Earthly Branch characters.
-    const STEM_SET = ['갑', '을', '병', '정', '무', '기', '경', '신', '임', '계'];
-    const BRANCH_SET = ['자', '축', '인', '묘', '진', '사', '오', '미', '신', '유', '술', '해'];
-    const todayPillarPart = (STEM_SET.includes(todayStem) && BRANCH_SET.includes(todayBranch))
-      ? ` Today's own day pillar (일진) is ${todayStem}${todayBranch}; read how it interacts with this person's day master ${dayStem}${dayBranch} (generating, controlling, clashing or harmonizing).`
-      : '';
+      const y = Number(periodYear);
+      const m = Number(periodMonth);
+      const yearOk = Number.isInteger(y) && y >= 1900 && y <= 2200;
+      const monthOk = Number.isInteger(m) && m >= 1 && m <= 12;
+      if (!yearOk || (kind === 'month' && !monthOk)) {
+        return res.status(400).json({ error: errMsg('invalidSajuData', lang) });
+      }
+      const when = kind === 'month' ? `the month ${y}-${String(m).padStart(2, '0')}` : `the year ${y}`;
+      const pPillar =
+        period && STEM_SET.includes(period.stem) && BRANCH_SET.includes(period.branch) ? `${period.stem}${period.branch}` : null;
 
-    const promptText = `You write short, warm, entertainment-only daily fortunes based on traditional Korean Saju (Four Pillars). ` +
-      `Someone's day-master element is ${element}, with year pillar ${yearStem}${yearBranch}, month pillar ${monthStem}${monthBranch}, ` +
-      `day pillar ${dayStem}${dayBranch}${hourPart}. ` +
-      `Today's date is ${todayText}.${todayPillarPart} ` +
-      `Write the fortune for this specific date in ${language} for exactly these four categories: work (career/business), money, love, health. ` +
-      `Make it specific to today so that it clearly differs from the reading for other days; do not write generic advice that would fit any day. ` +
-      `Each entry should be 1-2 upbeat, concrete sentences, avoid medical claims or fatalistic/alarming language, and call the submit_fortune tool with the result.`;
+      promptText =
+        `You write warm, entertainment-only ${kind === 'month' ? 'monthly' : 'yearly'} fortunes based on traditional Korean Saju (Four Pillars). ${chartIntro} ` +
+        `Write the reading for ${when}.${pPillar ? ` This ${kind === 'month' ? 'month' : 'year'}'s own pillar is ${pPillar}.` : ''} ` +
+        `How this ${kind === 'month' ? 'month' : 'year'}'s pillar meets this person's chart: ${periodText} ` +
+        `Write in ${language}. Give "summaryGood" (the overall favorable flow, 1-2 sentences) and "summaryCaution" (the overall things to watch out for, 1-2 sentences), ` +
+        `then for each of work (career/business), money, love and health give one "good" sentence and one "caution" sentence. ` +
+        `Keep every sentence concrete and short. ` + personalize + tone;
+      tool = PERIOD_FORTUNE_TOOL;
+      maxTokens = 1700;
+    }
 
     const message = await anthropic.messages.create({
       model: CLAUDE_MODEL,
-      max_tokens: 700,
-      tools: [FORTUNE_TOOL],
-      tool_choice: { type: 'tool', name: 'submit_fortune' },
+      max_tokens: maxTokens,
+      tools: [tool],
+      tool_choice: { type: 'tool', name: tool.name },
       messages: [{ role: 'user', content: promptText }],
     });
 
     const toolUse = (message.content || []).find((block) => block.type === 'tool_use');
-    const items = toolUse && Array.isArray(toolUse.input && toolUse.input.items) ? toolUse.input.items : null;
+    const input = toolUse && toolUse.input ? toolUse.input : null;
+    const items = input && Array.isArray(input.items) ? input.items : null;
     if (!items) return res.status(502).json({ error: errMsg('noAiResult', lang) });
+    const str = (v) => (v ? String(v).trim() : '');
+
+    if (kind === 'day') {
+      const cleaned = FORTUNE_CATEGORIES.map((cat) => {
+        const found = items.find((it) => it.category === cat);
+        return { category: cat, text: str(found && found.text), caution: str(found && found.caution) };
+      }).filter((it) => it.text);
+      if (!cleaned.length) return res.status(502).json({ error: errMsg('noAiResult', lang) });
+      return res.json({ items: cleaned });
+    }
 
     const cleaned = FORTUNE_CATEGORIES.map((cat) => {
       const found = items.find((it) => it.category === cat);
-      return { category: cat, text: found && found.text ? String(found.text).trim() : '' };
-    }).filter((it) => it.text);
-
-    if (!cleaned.length) return res.status(502).json({ error: errMsg('noAiResult', lang) });
-    res.json({ items: cleaned });
+      return { category: cat, good: str(found && found.good), caution: str(found && found.caution) };
+    }).filter((it) => it.good && it.caution);
+    const summaryGood = str(input.summaryGood);
+    const summaryCaution = str(input.summaryCaution);
+    if (!summaryGood || !summaryCaution || !cleaned.length) return res.status(502).json({ error: errMsg('noAiResult', lang) });
+    res.json({ summaryGood, summaryCaution, items: cleaned });
   } catch (e) {
     console.error('/api/fortune 오류:', e);
     res.status(502).json({ error: errMsg('fortuneFailed', req.body && req.body.lang) });
