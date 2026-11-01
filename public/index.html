@@ -924,6 +924,8 @@ const TRANSLATIONS = {
   'fortune.summary.caution': { ko: '⚠️ 조심할 점', en: '⚠️ Watch Out For' },
   'fortune.caution.prefix': { ko: '조심', en: 'Caution' },
   'fortune.todayCaution': { ko: '⚠️ 오늘의 주의사항', en: "⚠️ Today's Cautions" },
+  'fortune.points': { ko: '🔎 내 사주로 본 포인트', en: '🔎 Points from your chart' },
+  'fortune.aiPending': { ko: '내 사주에 맞춰 풀이 중…', en: 'tailoring to your chart…' },
   'result.lucky.title': { ko: '행운의 숫자 10', en: '10 Lucky Numbers' },
   'result.lucky.desc': { ko: '사주 여덟 글자의 기운으로 뽑은 오늘의 행운 숫자예요.', en: "Today's lucky numbers, drawn from the energy of your eight Saju characters." },
   'result.sets.title': { ko: '추천 조합 5세트', en: '5 Recommended Combinations' },
@@ -1909,9 +1911,180 @@ function getPeriodPillars(){
   };
 }
 
+/* ---------------- whole-chart analysis (사주 전체 기반 개인화) ----------------
+   Reading only the day stem gives just 10 possible results. Here the whole chart is used:
+   - 오행 분포: how many of each element the 8 characters hold (what is lacking / excessive)
+   - 신강·신약: whether the day master is supported (same element + the element that
+     generates it) or drained by the rest of the chart
+   - 합·충·형: how the period's stem and branch meet EACH of the person's own pillars
+   The result is a set of plain facts. They are shown to the user as "내 사주로 본 포인트"
+   and also sent to the AI so its wording is grounded in this specific chart. */
+const ELEMENTS = ['목','화','토','금','수'];
+// Main element of each earthly branch: 자축인묘진사오미신유술해
+const BRANCH_ELEMENT = ['수','토','목','목','토','화','화','토','금','금','토','수'];
+const POS_KEYS = ['year','month','day','hour'];
+const POS_KO = { year:'연주(조상·외부 환경)', month:'월주(직업·사회 활동)', day:'일주(나 자신·배우자·가정)', hour:'시주(자녀·말년·아랫사람)' };
+const POS_EN = { year:'year pillar (roots, outer environment)', month:'month pillar (career, social life)', day:'day pillar (self, partner, home)', hour:'hour pillar (children, later life)' };
+// 형(刑): 인사신, 축술미, 자묘
+const PUNISH_GROUPS = [[2,5,8],[1,10,7],[0,3]];
+
+function sipsungGroup(sip){
+  return ['peer','output','wealth','officer','resource'][Math.floor(SIPSUNG_KEYS.indexOf(sip)/2)];
+}
+
+function analyzeChart(saju){
+  const counts = { '목':0, '화':0, '토':0, '금':0, '수':0 };
+  const dayEl = STEM_ELEMENT[saju.day.stem] || '토';
+  const resourceEl = ELEMENTS[(ELEMENTS.indexOf(dayEl)+4)%5]; // the element that generates the day master
+  let supporters = 0, others = 0;
+  POS_KEYS.forEach(k=>{
+    const p = saju[k];
+    if(!p) return;
+    const els = [STEM_ELEMENT[p.stem], BRANCH_ELEMENT[p.branchIdx]];
+    els.forEach((el, i)=>{
+      if(!el) return;
+      counts[el]++;
+      if(k==='day' && i===0) return; // the day stem itself is the reference point
+      others++;
+      if(el===dayEl || el===resourceEl) supporters++;
+    });
+  });
+  const ratio = others ? supporters/others : 0.5;
+  const strength = ratio>=0.6 ? 'strong' : (ratio<=0.34 ? 'weak' : 'balanced');
+  return {
+    counts, dayEl, strength,
+    lacking: ELEMENTS.filter(e=>counts[e]===0),
+    excess: ELEMENTS.filter(e=>counts[e]>=3)
+  };
+}
+
+// How a period's pillar (오늘 일진 / 이달 월운 / 올해 세운) meets this person's chart.
+function analyzePeriod(saju, chart, pillar){
+  const sip = getSipsung(saju.day.stemIdx, pillar.stemIdx);
+  const relations = [];
+  POS_KEYS.forEach(k=>{
+    const p = saju[k];
+    if(!p) return;
+    const br = getBranchRelation(pillar.branchIdx, p.branchIdx);
+    if(br){
+      relations.push({ pos:k, type:br, target:p.branch });
+    } else if(pillar.branchIdx!==p.branchIdx && PUNISH_GROUPS.some(g=>g.includes(pillar.branchIdx) && g.includes(p.branchIdx))){
+      relations.push({ pos:k, type:'punish', target:p.branch });
+    }
+    const sd = Math.abs(pillar.stemIdx - p.stemIdx);
+    if(sd===5) relations.push({ pos:k, type:'stemHarmony', target:p.stem });
+    else if(sd===6) relations.push({ pos:k, type:'stemClash', target:p.stem });
+  });
+  const periodEls = [STEM_ELEMENT[pillar.stem], BRANCH_ELEMENT[pillar.branchIdx]];
+  const uniq = arr => arr.filter((v,i)=>arr.indexOf(v)===i);
+  return {
+    stem: pillar.stem, branch: pillar.branch,
+    sipsung: sip, group: sipsungGroup(sip),
+    relations: relations.slice(0, 8),
+    fills: uniq(periodEls.filter(e=>chart.lacking.includes(e))),
+    feeds: uniq(periodEls.filter(e=>chart.excess.includes(e)))
+  };
+}
+
+// Human-readable facts derived from the chart + period, split into good / caution.
+function buildPersonalNotes(chart, pa){
+  const isEn = currentLang==='en';
+  const pos = isEn ? POS_EN : POS_KO;
+  const good = [], caution = [];
+
+  const supportive = pa.group==='peer' || pa.group==='resource';
+  if(chart.strength==='strong'){
+    if(supportive) caution.push(isEn
+      ? 'Your chart is already strong, and this period adds more of the same energy. Stubbornness and overreach come easily.'
+      : '내 사주는 기운이 강한 편(신강)인데 이 시기에 같은 기운이 더해져, 고집·과욕·독단이 커지기 쉬워요.');
+    else good.push(isEn
+      ? 'Your chart is strong, and this period gives that strength somewhere to go (results, money, responsibility).'
+      : '내 사주는 기운이 강한 편(신강)이라, 이 시기에 그 힘을 쓸 곳(성과·재물·책임)이 생겨 능력을 발휘하기 좋아요.');
+  } else if(chart.strength==='weak'){
+    if(supportive) good.push(isEn
+      ? 'Your chart is on the gentle side, and this period adds support and strength.'
+      : '내 사주는 기운이 여린 편(신약)인데 이 시기에 도움과 힘이 보태져 든든해요.');
+    else caution.push(isEn
+      ? 'Your chart is on the gentle side, and this period asks a lot of you. Energy drains easily, so pace yourself and rest.'
+      : '내 사주는 기운이 여린 편(신약)인데 이 시기에는 쓸 힘이 많아져 체력·마음이 소모되기 쉬워요. 무리하지 말고 쉬어 가세요.');
+  }
+
+  pa.fills.forEach(el=> good.push(isEn
+    ? `It brings ${elementLabel(el)} energy that your chart lacks, which improves your balance.`
+    : `내 사주에 없는 ${elementLabel(el)} 기운을 채워 줘서 균형이 좋아지는 시기예요.`));
+  pa.feeds.forEach(el=> caution.push(isEn
+    ? `${elementLabel(el)} is already plentiful in your chart and gets stronger, so things can tip to one side.`
+    : `내 사주에 이미 많은 ${elementLabel(el)} 기운이 더 강해져서 한쪽으로 치우치기 쉬워요.`));
+
+  pa.relations.forEach(r=>{
+    const where = pos[r.pos];
+    if(r.type==='clash') caution.push(isEn ? `Clash (沖) with your ${where} (${r.target}): change, moving around or friction in this area.` : `${where}의 지지(${r.target})와 충(沖): 이 영역에 변화·이동·갈등이 생기기 쉬워요.`);
+    else if(r.type==='harmony') good.push(isEn ? `Harmony (合) with your ${where} (${r.target}): cooperation and help in this area.` : `${where}의 지지(${r.target})와 합(合): 이 영역에서 협력과 도움을 받기 쉬워요.`);
+    else if(r.type==='punish') caution.push(isEn ? `Tension (刑) with your ${where} (${r.target}): stress builds in this area, so mind your words and promises.` : `${where}의 지지(${r.target})와 형(刑): 이 영역에서 마찰·스트레스가 쌓이기 쉬우니 말과 약속을 조심하세요.`);
+    else if(r.type==='stemHarmony') good.push(isEn ? `Stem harmony (合) with your ${where} (${r.target}): connections and chances carry on in this area.` : `${where}의 천간(${r.target})과 합(合): 이 영역에서 인연과 기회가 이어지기 쉬워요.`);
+    else if(r.type==='stemClash') caution.push(isEn ? `Stem clash (沖) with your ${where} (${r.target}): plans and opinions may wobble in this area.` : `${where}의 천간(${r.target})과 충(沖): 이 영역에서 생각이 엇갈리거나 계획이 흔들릴 수 있어요.`);
+  });
+  return { good, caution };
+}
+
+function chartSignature(saju){
+  return POS_KEYS.map(k=> saju[k] ? saju[k].stem+saju[k].branch : '--').join('');
+}
+function sajuPayload(saju){
+  return {
+    yearStem: saju.year.stem, yearBranch: saju.year.branch,
+    monthStem: saju.month.stem, monthBranch: saju.month.branch,
+    dayStem: saju.day.stem, dayBranch: saju.day.branch,
+    hourStem: saju.hour ? saju.hour.stem : null,
+    hourBranch: saju.hour ? saju.hour.branch : null
+  };
+}
+function chartAndPeriodPayload(chart, pa){
+  return {
+    element: chart.dayEl,
+    chart: { elements: chart.counts, strength: chart.strength, lacking: chart.lacking, excess: chart.excess },
+    period: { stem: pa.stem, branch: pa.branch, sipsung: pa.sipsung, relations: pa.relations, fills: pa.fills, feeds: pa.feeds }
+  };
+}
+
 const FORTUNE_ENDPOINT = '/api/fortune';
 
-async function getTodaysFortune(user){
+// Month / year readings written by the AI from the whole chart. Cached on the device per
+// chart + month (or year) + language, so each is requested only once per month / year.
+async function getPeriodAI(user, scope, chart, pa, periods){
+  const sig = chartSignature(user.saju);
+  const key = scope==='month' ? `${sig}-${periods.y}-${periods.m}-${currentLang}` : `${sig}-${periods.y}-${currentLang}`;
+  user.periodAI = user.periodAI || {};
+  const cached = user.periodAI[scope];
+  if(cached && cached.key===key && cached.data) return cached.data;
+
+  const payload = {
+    scope,
+    periodYear: periods.y,
+    ...(scope==='month' ? { periodMonth: periods.m } : {}),
+    ...sajuPayload(user.saju),
+    ...chartAndPeriodPayload(chart, pa)
+  };
+  const data = await apiPost(FORTUNE_ENDPOINT, payload);
+  if(!data || !data.summaryGood || !data.summaryCaution || !Array.isArray(data.items)) throw new Error(t('err.noAiResult'));
+  user.periodAI[scope] = { key, data };
+  await saveUser(user);
+  return data;
+}
+
+// Replaces the generic ten-god wording of a local reading with the AI's chart-specific text.
+function applyAIToReading(reading, ai){
+  const cats = FORTUNE_CATEGORIES.map(cat=>{
+    const f = ai.items.find(i=>i.category===cat && i.good && i.caution);
+    if(f) return { category:cat, label:fortuneCategoryLabel(cat), icon:FORTUNE_CATEGORY_ICON[cat], good:f.good, caution:f.caution };
+    return reading.cats.find(c=>c.category===cat) || null;
+  }).filter(Boolean);
+  return { ...reading, summaryGood: ai.summaryGood, summaryCaution: ai.summaryCaution, cats };
+}
+
+let resultRenderSeq = 0;
+
+async function getTodaysFortune(user, chart, dayPA){
   const dayStem = user.saju.day.stem;
   const element = STEM_ELEMENT[dayStem] || '토';
   const now = new Date();
@@ -1926,24 +2099,22 @@ async function getTodaysFortune(user){
   // the computed saju - and therefore the element - within the same calendar day;
   // without it, a stale fortune for the old element would be shown under the new
   // element's badge.
-  const fortuneKey = `${dayStem}-${todayKey}-${currentLang}`;
+  // v2: the key covers the whole chart (all four pillars), since the text now depends on it.
+  const fortuneKey = `v2-${chartSignature(user.saju)}-${todayKey}-${currentLang}`;
   if(user.fortune && user.fortuneKey === fortuneKey){
     return { element, items: user.fortune, dateLabel };
   }
 
   const saju = user.saju;
   // Today's own day pillar (일진) and date go to the server so the AI text is tied to
-  // this specific day instead of being generic for the person's saju.
+  // this specific day, and the whole-chart facts tie it to this specific person.
   const todayPillar = getDayPillar(now.getFullYear(), now.getMonth()+1, now.getDate());
   const payload = {
+    scope: 'day',
     todayKey,
     todayStem: todayPillar.stem, todayBranch: todayPillar.branch,
-    element,
-    dayStem, dayBranch: saju.day.branch,
-    yearStem: saju.year.stem, yearBranch: saju.year.branch,
-    monthStem: saju.month.stem, monthBranch: saju.month.branch,
-    hourStem: saju.hour ? saju.hour.stem : null,
-    hourBranch: saju.hour ? saju.hour.branch : null,
+    ...sajuPayload(saju),
+    ...chartAndPeriodPayload(chart, dayPA),
     dateLabel
   };
 
@@ -1954,7 +2125,7 @@ async function getTodaysFortune(user){
     items = FORTUNE_CATEGORIES.map(cat=>{
       const found = data.items.find(it=>it.category===cat);
       const text = (found && found.text) ? found.text : getFallbackFortune(user, element, dayStem, todayKey).find(f=>f.category===cat).text;
-      return { category: cat, label: fortuneCategoryLabel(cat), icon: FORTUNE_CATEGORY_ICON[cat], text };
+      return { category: cat, label: fortuneCategoryLabel(cat), icon: FORTUNE_CATEGORY_ICON[cat], text, caution: (found && found.caution) ? found.caution : '' };
     });
   }catch(e){
     console.error('오늘의 운세 생성 실패, 기본 문구로 대체합니다:', e);
@@ -2082,23 +2253,43 @@ async function renderResult(){
 
   // This month's and this year's readings are computed locally, so show them right
   // away instead of making them wait for the AI-generated daily text below.
+  const seq = ++resultRenderSeq;
   const periods = getPeriodPillars();
+  const chart = analyzeChart(saju);
+  const monthPA = analyzePeriod(saju, chart, periods.month);
+  const yearPA = analyzePeriod(saju, chart, periods.year);
+  const dayPA = analyzePeriod(saju, chart, periods.day);
   const monthReading = buildPeriodReading(saju, periods.month);
   const yearReading = buildPeriodReading(saju, periods.year);
+  const monthNotes = buildPersonalNotes(chart, monthPA);
+  const yearNotes = buildPersonalNotes(chart, yearPA);
   const isEn = currentLang==='en';
-  renderPeriodCard('month', monthReading,
-    isEn ? `This Month · ${romanizePillar(periods.month)} · ${monthReading.sipsungLabel}`
-         : `이달의 기운 · ${periods.month.stem}${periods.month.branch}(${periods.month.stemHanja}${periods.month.branchHanja}) · ${monthReading.sipsungLabel}`,
-    isEn ? `As of ${periods.m}/${periods.y}` : `${periods.y}년 ${periods.m}월 기준`);
-  renderPeriodCard('year', yearReading,
-    isEn ? `This Year · ${romanizePillar(periods.year)} · ${yearReading.sipsungLabel}`
-         : `올해의 기운 · ${periods.year.stem}${periods.year.branch}(${periods.year.stemHanja}${periods.year.branchHanja})년 · ${yearReading.sipsungLabel}`,
-    isEn ? `As of ${periods.y}` : `${periods.y}년 기준`);
+  const monthTag = isEn ? `This Month · ${romanizePillar(periods.month)} · ${monthReading.sipsungLabel}`
+         : `이달의 기운 · ${periods.month.stem}${periods.month.branch}(${periods.month.stemHanja}${periods.month.branchHanja}) · ${monthReading.sipsungLabel}`;
+  const monthDate = isEn ? `As of ${periods.m}/${periods.y}` : `${periods.y}년 ${periods.m}월 기준`;
+  const yearTag = isEn ? `This Year · ${romanizePillar(periods.year)} · ${yearReading.sipsungLabel}`
+         : `올해의 기운 · ${periods.year.stem}${periods.year.branch}(${periods.year.stemHanja}${periods.year.branchHanja})년 · ${yearReading.sipsungLabel}`;
+  const yearDate = isEn ? `As of ${periods.y}` : `${periods.y}년 기준`;
+  const drawMonth = (reading, pending)=>renderPeriodCard('month', reading, monthTag, monthDate, monthNotes, pending);
+  const drawYear = (reading, pending)=>renderPeriodCard('year', reading, yearTag, yearDate, yearNotes, pending);
+
+  // Show the local reading + "points from your chart" right away; the AI-written,
+  // chart-specific wording replaces the generic text when it arrives (and is cached).
+  drawMonth(monthReading, true);
+  drawYear(yearReading, true);
+  [['month', monthPA, monthReading, drawMonth], ['year', yearPA, yearReading, drawYear]].forEach(([scope, pa, reading, draw])=>{
+    getPeriodAI(currentUser, scope, chart, pa, periods)
+      .then(ai=>{ if(seq===resultRenderSeq) draw(applyAIToReading(reading, ai), false); })
+      .catch(e=>{
+        console.error(scope+' 운세 AI 생성 실패, 기본 풀이를 유지합니다:', e);
+        if(seq===resultRenderSeq) draw(reading, false);
+      });
+  });
 
   // Today's cautions come from the same ten-god reading, using today's day pillar.
   const dayReading = buildPeriodReading(saju, periods.day);
 
-  const fortune = await getTodaysFortune(currentUser);
+  const fortune = await getTodaysFortune(currentUser, chart, dayPA);
   const fortuneTagText = currentLang==='en' ? `Today's Energy · ${elementLabel(fortune.element)}` : `오늘의 기운 · ${elementLabel(fortune.element)}`;
   document.getElementById('fortune-tag-wrap').innerHTML =
     `<span class="fortune-tag">${fortuneTagText}</span>`;
@@ -2133,7 +2324,7 @@ function makeSummaryEl(kind, text){
 
 // Renders the monthly / yearly card: tag, two summaries (good + caution), then each
 // category with its favorable line followed by its caution line.
-function renderPeriodCard(prefix, reading, tagText, dateText){
+function renderPeriodCard(prefix, reading, tagText, dateText, notes, pending){
   const tagWrap = document.getElementById(prefix+'-tag-wrap');
   tagWrap.innerHTML = '';
   const tag = document.createElement('span');
@@ -2147,6 +2338,23 @@ function renderPeriodCard(prefix, reading, tagText, dateText){
 
   const items = document.getElementById(prefix+'-items');
   items.innerHTML = '';
+  // Facts about THIS chart (오행 balance, 신강/신약, 합·충·형 with each pillar) come first.
+  if(notes && (notes.good.length || notes.caution.length)){
+    const row = document.createElement('div');
+    row.className = 'fortune-item';
+    const label = document.createElement('div');
+    label.className = 'fortune-item-label';
+    label.textContent = t('fortune.points');
+    row.appendChild(label);
+    notes.good.forEach(txt=>{
+      const g = document.createElement('div');
+      g.className = 'fortune-good';
+      g.textContent = '✔ ' + txt;
+      row.appendChild(g);
+    });
+    notes.caution.forEach(txt=> row.appendChild(makeCautionEl(txt, true)));
+    items.appendChild(row);
+  }
   reading.cats.forEach(c=>{
     const row = document.createElement('div');
     row.className = 'fortune-item';
@@ -2159,15 +2367,7 @@ function renderPeriodCard(prefix, reading, tagText, dateText){
     row.append(label, good, makeCautionEl(c.caution));
     items.appendChild(row);
   });
-  if(reading.branchNote){
-    const row = document.createElement('div');
-    row.className = 'fortune-item';
-    row.appendChild(reading.branchNote.type==='clash'
-      ? makeCautionEl(reading.branchNote.text)
-      : Object.assign(document.createElement('div'), { className:'fortune-good', textContent:'🤝 ' + reading.branchNote.text }));
-    items.appendChild(row);
-  }
-  document.getElementById(prefix+'-date').textContent = dateText;
+  document.getElementById(prefix+'-date').textContent = pending ? `${dateText} · ${t('fortune.aiPending')}` : dateText;
 }
 
 // item.text comes from the /api/fortune backend (an LLM response), so it is built
@@ -2193,8 +2393,10 @@ function renderFortuneItems(items, reading){
 
     // Locally computed counterpart to the (positive) AI text: what to watch out for
     // today in this category, based on today's relationship to the user's day stem.
+    // The AI now writes a chart-specific caution too; the local one is the fallback.
     const c = reading && reading.cats.find(x=>x.category===item.category);
-    if(c) row.appendChild(makeCautionEl(c.caution));
+    if(item.caution) row.appendChild(makeCautionEl(item.caution));
+    else if(c) row.appendChild(makeCautionEl(c.caution));
 
     wrap.appendChild(row);
   });
