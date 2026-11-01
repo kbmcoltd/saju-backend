@@ -1587,8 +1587,26 @@ function romanizePillar(p){ return currentLang==='en' ? `${STEM_ROMAN[p.stem]} $
 
 const FORTUNE_CATEGORY_LABEL_KO = { work:'사업·일운', money:'금전운', love:'연애운', health:'건강운' };
 const FORTUNE_CATEGORY_LABEL_EN = { work:'Career', money:'Money', love:'Love', health:'Wellness' };
-function fortuneCategoryLabel(cat){ return currentLang==='en' ? FORTUNE_CATEGORY_LABEL_EN[cat] : FORTUNE_CATEGORY_LABEL_KO[cat]; }
 const FORTUNE_CATEGORY_ICON = { work:'💼', money:'💰', love:'💕', health:'🌿' };
+
+// Age 18 or under (만 나이): the "work" category becomes 학업운 (studies) instead of career.
+// Internally the category key stays 'work' so the data shape and the server API do not change.
+function getManAge(birth){
+  const now = new Date();
+  let age = now.getFullYear() - birth.y;
+  if(now.getMonth()+1 < birth.m || (now.getMonth()+1 === birth.m && now.getDate() < birth.d)) age--;
+  return age;
+}
+function isStudentAge(){
+  return !!(currentUser && currentUser.birth && getManAge(currentUser.birth) <= 18);
+}
+function fortuneCategoryLabel(cat){
+  if(cat==='work' && isStudentAge()) return currentLang==='en' ? 'Studies' : '학업운';
+  return currentLang==='en' ? FORTUNE_CATEGORY_LABEL_EN[cat] : FORTUNE_CATEGORY_LABEL_KO[cat];
+}
+function fortuneCategoryIcon(cat){
+  return (cat==='work' && isStudentAge()) ? '📚' : FORTUNE_CATEGORY_ICON[cat];
+}
 
 const FORTUNE_TEXTS = {
   '목': {
@@ -1705,6 +1723,35 @@ const FORTUNE_TEXTS = {
 
 const FORTUNE_CATEGORIES = ['work','money','love','health'];
 
+// Study-luck wording for students (만 18세 이하), replacing the career text of the 'work' category.
+const FORTUNE_STUDY_TEXTS = {
+  '목': [
+    '새로운 과목이나 목표를 시작하기 좋은 흐름이에요. 미뤄둔 공부를 다시 꺼내 보세요.',
+    '성장의 기운이 강해 배운 내용을 넓혀 가거나 친구와 함께 공부해 보기에 좋아요.',
+    '계획을 구체적으로 세우고 오늘 한 걸음만 시작해 보세요. 시작이 좋은 결과를 만들어요.'
+  ],
+  '화': [
+    '집중력과 표현력이 올라 발표·토론·수행평가에 유리해요.',
+    '열정이 높아 암기와 문제 풀이에 속도가 붙어요. 쉬는 시간도 꼭 챙기세요.',
+    '자신 있게 질문하고 드러내 보면 좋은 반응이 있어요.'
+  ],
+  '토': [
+    '차분히 기본기를 다지기 좋은 날이에요. 복습과 정리가 큰 힘이 돼요.',
+    '꾸준함이 빛나는 날이에요. 한 자리에서 오래 집중해 보세요.',
+    '무리한 진도보다 이해가 덜 된 부분을 채우는 데 시간을 쓰면 좋아요.'
+  ],
+  '금': [
+    '정확함과 판단력이 좋아 문제 풀이와 오답 정리에 유리해요.',
+    '계획을 정리하고 불필요한 것을 덜어내면 공부 효율이 올라요.',
+    '깔끔하게 마무리하는 습관이 성적으로 이어져요.'
+  ],
+  '수': [
+    '이해력과 응용력이 좋아 독서·탐구·논술에 유리해요.',
+    '아이디어가 잘 떠오르니 메모하고 정리해 두세요.',
+    '조용한 곳에서 깊이 생각하면 막혔던 부분이 풀릴 수 있어요.'
+  ]
+};
+
 const FALLBACK_FORTUNE_EN = {
   work: "It's a good day to take one small, concrete step on something you've been putting off.",
   money: 'Keep an eye on your spending today — a little planning goes a long way.',
@@ -1716,17 +1763,19 @@ const FALLBACK_FORTUNE_EN = {
 // so the screen still shows something instead of breaking. In English mode we use a
 // simple generic message per category rather than machine-translating the Korean set.
 function getFallbackFortune(user, element, dayStem, todayKey){
+  const student = isStudentAge();
   if(currentLang==='en'){
     return FORTUNE_CATEGORIES.map(cat=>({
-      category: cat, label: fortuneCategoryLabel(cat), icon: FORTUNE_CATEGORY_ICON[cat], text: FALLBACK_FORTUNE_EN[cat]
+      category: cat, label: fortuneCategoryLabel(cat), icon: fortuneCategoryIcon(cat),
+      text: (cat==='work' && student) ? 'Review one small thing you learned today. A little steady practice beats cramming.' : FALLBACK_FORTUNE_EN[cat]
     }));
   }
   return FORTUNE_CATEGORIES.map(cat=>{
     const seed = hashSeed(`${user.phone}-${dayStem}-${todayKey}-${cat}`);
     const rand = mulberry32(seed);
-    const arr = FORTUNE_TEXTS[element][cat];
+    const arr = (cat==='work' && student) ? FORTUNE_STUDY_TEXTS[element] : FORTUNE_TEXTS[element][cat];
     const text = arr[Math.floor(rand()*arr.length)];
-    return { category: cat, label: fortuneCategoryLabel(cat), icon: FORTUNE_CATEGORY_ICON[cat], text };
+    return { category: cat, label: fortuneCategoryLabel(cat), icon: fortuneCategoryIcon(cat), text };
   });
 }
 
@@ -1842,6 +1891,21 @@ const SIPSUNG_TEXTS = {
 
 // English mode shows a shorter version: one good-flow line and one caution line per
 // ten-god, rather than machine-translating all the per-category Korean sentences.
+// Study-luck lines per ten-god for students; used in place of the career ('work') lines.
+const SIPSUNG_STUDY_TEXTS = {
+  '비견': { good:'또래 친구와 함께 공부하며 서로 자극받고, 스스로 계획을 세워 밀고 나가기 좋아요.', caution:'내 방식만 고집하면 조별 활동이나 친구와 마찰이 생길 수 있어요. 의견을 맞추는 데 시간을 쓰세요.' },
+  '겁재': { good:'경쟁 속에서 실력이 드러나 성적을 끌어올릴 기회가 있어요.', caution:'친구와 비교하다 조급해지기 쉬워요. 내 페이스를 지키세요.' },
+  '식신': { good:'배운 것이 자연스럽게 몸에 익고, 발표·글쓰기·실습에서 재능이 드러나요.', caution:'마음이 느슨해져 미루거나 놀고 싶은 유혹이 커져요. 하루 공부량을 정해 두세요.' },
+  '상관': { good:'창의적인 아이디어가 샘솟아 토론·창작·예체능 활동에서 두각을 나타내기 좋아요.', caution:'선생님이나 규칙에 반발하기 쉽고 말이 날카로워질 수 있어요. 한 번 정리해서 표현하세요.' },
+  '편재': { good:'관심 분야가 넓어져 다양한 활동과 체험에서 배울 거리가 많아요.', caution:'이것저것 벌이다 집중이 흩어질 수 있어요. 우선순위를 정하세요.',
+            summaryGood:'관심 분야가 넓어지고 다양한 활동과 경험에서 배울 거리가 눈에 띄는 시기예요.', summaryCaution:'욕심이 앞서 이것저것 벌이다 마무리가 흐트러질 수 있어요. 해낼 수 있는 만큼만 정하세요.' },
+  '정재': { good:'꾸준히 복습한 만큼 성적이 안정적으로 오르는 시기예요.', caution:'무난한 범위에만 머물러 도전을 피할 수 있어요. 틀린 문제와 세부 사항을 꼼꼼히 확인하세요.' },
+  '편관': { good:'목표가 뚜렷해지고 어려운 과제도 끈기 있게 해내는 힘이 붙어요.', caution:'시험·평가 압박으로 긴장과 스트레스가 커질 수 있어요. 규칙적인 수면과 휴식을 챙기세요.' },
+  '정관': { good:'성실함을 인정받고 모범적인 태도로 신뢰를 얻기 좋아요. 시험과 평가에 유리해요.', caution:'실수에 대한 걱정과 완벽주의로 스스로를 몰아붙이기 쉬워요. 결과보다 과정을 칭찬해 주세요.' },
+  '편인': { good:'독특한 분야나 깊이 있는 공부에 몰입하기 좋고 직관이 살아나요.', caution:'생각이 많아져 공부 시작이 늦어지거나 혼자 고민을 끌어안기 쉬워요. 선생님·가족과 나누세요.' },
+  '정인': { good:'선생님과 가족의 도움, 좋은 학습 기회가 따르고 이해력이 좋아져요. 시험·자격 준비에 유리해요.', caution:'도움에 기대 미루거나 스스로 결정하지 못할 수 있어요. 직접 계획을 세워 실천하세요.' }
+};
+
 const SIPSUNG_TEXTS_EN = {
   '비견': { good:'Self-confidence and independence grow. A good time to set your own direction.', caution:'Stubbornness and friction with rivals or partners are likely. Make room for compromise.' },
   '겁재': { good:'Drive and competitive spirit give you the push to take on challenges.', caution:'Spending and rivalry run high. Be careful with impulsive choices and money between people.' },
@@ -1880,19 +1944,26 @@ function buildPeriodReading(saju, pillar){
   const ko = SIPSUNG_TEXTS[sip];
   const en = SIPSUNG_TEXTS_EN[sip];
   const isEn = currentLang==='en';
-  const cats = FORTUNE_CATEGORIES.map(cat=>({
-    category: cat,
-    label: fortuneCategoryLabel(cat),
-    icon: FORTUNE_CATEGORY_ICON[cat],
-    good: ko[cat].good,
-    caution: ko[cat].caution
-  }));
+  const student = isStudentAge();
+  const study = SIPSUNG_STUDY_TEXTS[sip];
+  const cats = FORTUNE_CATEGORIES.map(cat=>{
+    const src = (cat==='work' && student) ? study : ko[cat];
+    return {
+      category: cat,
+      label: fortuneCategoryLabel(cat),
+      icon: fortuneCategoryIcon(cat),
+      good: src.good,
+      caution: src.caution
+    };
+  });
+  const koGood = (student && study.summaryGood) || ko.good;
+  const koCaution = (student && study.summaryCaution) || ko.caution;
   return {
     pillar,
     sipsung: sip,
     sipsungLabel: isEn ? `${SIPSUNG_EN[sip]} (${SIPSUNG_HANJA[sip]})` : `${sip}(${SIPSUNG_HANJA[sip]})`,
-    summaryGood: isEn ? en.good : ko.good,
-    summaryCaution: isEn ? en.caution : ko.caution,
+    summaryGood: isEn ? en.good : koGood,
+    summaryCaution: isEn ? en.caution : koCaution,
     // Per-category lines are Korean-only; in English mode we show just the summaries.
     cats: isEn ? [] : cats,
     branchNote: rel ? { type: rel, text: BRANCH_NOTE[rel][isEn ? 'en' : 'ko'] } : null
@@ -1989,7 +2060,12 @@ function analyzePeriod(saju, chart, pillar){
 // Human-readable facts derived from the chart + period, split into good / caution.
 function buildPersonalNotes(chart, pa){
   const isEn = currentLang==='en';
-  const pos = isEn ? POS_EN : POS_KO;
+  const pos = Object.assign({}, isEn ? POS_EN : POS_KO);
+  if(isStudentAge()){
+    pos.month = isEn ? 'month pillar (school life, friends)' : '월주(학업·친구 관계)';
+    pos.day = isEn ? 'day pillar (self, family, home)' : '일주(나 자신·가족·가정)';
+    pos.hour = isEn ? 'hour pillar (future, aspirations)' : '시주(꿈·미래)';
+  }
   const good = [], caution = [];
 
   const supportive = pa.group==='peer' || pa.group==='resource';
@@ -2053,13 +2129,15 @@ const FORTUNE_ENDPOINT = '/api/fortune';
 // chart + month (or year) + language, so each is requested only once per month / year.
 async function getPeriodAI(user, scope, chart, pa, periods){
   const sig = chartSignature(user.saju);
-  const key = scope==='month' ? `${sig}-${periods.y}-${periods.m}-${currentLang}` : `${sig}-${periods.y}-${currentLang}`;
+  const who = isStudentAge() ? 's' : 'w';
+  const key = scope==='month' ? `${sig}-${who}-${periods.y}-${periods.m}-${currentLang}` : `${sig}-${who}-${periods.y}-${currentLang}`;
   user.periodAI = user.periodAI || {};
   const cached = user.periodAI[scope];
   if(cached && cached.key===key && cached.data) return cached.data;
 
   const payload = {
     scope,
+    student: isStudentAge(),
     periodYear: periods.y,
     ...(scope==='month' ? { periodMonth: periods.m } : {}),
     ...sajuPayload(user.saju),
@@ -2076,7 +2154,7 @@ async function getPeriodAI(user, scope, chart, pa, periods){
 function applyAIToReading(reading, ai){
   const cats = FORTUNE_CATEGORIES.map(cat=>{
     const f = ai.items.find(i=>i.category===cat && i.good && i.caution);
-    if(f) return { category:cat, label:fortuneCategoryLabel(cat), icon:FORTUNE_CATEGORY_ICON[cat], good:f.good, caution:f.caution };
+    if(f) return { category:cat, label:fortuneCategoryLabel(cat), icon:fortuneCategoryIcon(cat), good:f.good, caution:f.caution };
     return reading.cats.find(c=>c.category===cat) || null;
   }).filter(Boolean);
   return { ...reading, summaryGood: ai.summaryGood, summaryCaution: ai.summaryCaution, cats };
@@ -2100,7 +2178,7 @@ async function getTodaysFortune(user, chart, dayPA){
   // without it, a stale fortune for the old element would be shown under the new
   // element's badge.
   // v2: the key covers the whole chart (all four pillars), since the text now depends on it.
-  const fortuneKey = `v2-${chartSignature(user.saju)}-${todayKey}-${currentLang}`;
+  const fortuneKey = `v3-${chartSignature(user.saju)}-${isStudentAge() ? 's' : 'w'}-${todayKey}-${currentLang}`;
   if(user.fortune && user.fortuneKey === fortuneKey){
     return { element, items: user.fortune, dateLabel };
   }
@@ -2111,6 +2189,7 @@ async function getTodaysFortune(user, chart, dayPA){
   const todayPillar = getDayPillar(now.getFullYear(), now.getMonth()+1, now.getDate());
   const payload = {
     scope: 'day',
+    student: isStudentAge(),
     todayKey,
     todayStem: todayPillar.stem, todayBranch: todayPillar.branch,
     ...sajuPayload(saju),
@@ -2125,7 +2204,7 @@ async function getTodaysFortune(user, chart, dayPA){
     items = FORTUNE_CATEGORIES.map(cat=>{
       const found = data.items.find(it=>it.category===cat);
       const text = (found && found.text) ? found.text : getFallbackFortune(user, element, dayStem, todayKey).find(f=>f.category===cat).text;
-      return { category: cat, label: fortuneCategoryLabel(cat), icon: FORTUNE_CATEGORY_ICON[cat], text, caution: (found && found.caution) ? found.caution : '' };
+      return { category: cat, label: fortuneCategoryLabel(cat), icon: fortuneCategoryIcon(cat), text, caution: (found && found.caution) ? found.caution : '' };
     });
   }catch(e){
     console.error('오늘의 운세 생성 실패, 기본 문구로 대체합니다:', e);
