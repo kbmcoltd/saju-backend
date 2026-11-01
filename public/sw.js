@@ -1,5 +1,5 @@
 // 사주행운 서비스워커 - PWA 설치 및 기본 오프라인 지원용
-const CACHE_NAME = 'saju-lucky-v1';
+const CACHE_NAME = 'saju-lucky-v2'; // 화면 문구가 바뀌면 버전을 올려 이전 캐시를 비움
 const APP_SHELL = [
   '/',
   '/index.html',
