@@ -381,6 +381,11 @@ const POS_TEXT = {
   day: 'day pillar (self, spouse, home)',
   hour: 'hour pillar (children, later life, subordinates)',
 };
+const STUDENT_POS_TEXT = {
+  month: 'month pillar (school life, friends, studies)',
+  day: 'day pillar (self, family, home)',
+  hour: 'hour pillar (future, aspirations)',
+};
 const RELATION_TEXT = {
   clash: "the period's branch CLASHES (충) with the person's {pos} branch {target}",
   harmony: "the period's branch HARMONIZES (합) with the person's {pos} branch {target}",
@@ -447,7 +452,7 @@ const PERIOD_FORTUNE_TOOL = {
 function pickFrom(set, v) {
   return set.includes(v) ? v : null;
 }
-function cleanChartFacts(chart, period) {
+function cleanChartFacts(chart, period, student) {
   const c = chart && typeof chart === 'object' ? chart : {};
   const p = period && typeof period === 'object' ? period : {};
   const counts = ELEMENT_SET.map((el) => {
@@ -471,7 +476,8 @@ function cleanChartFacts(chart, period) {
     if (!r || !RELATION_SET.includes(r.type) || !POS_SET.includes(r.pos)) return;
     const target = STEM_SET.includes(r.target) || BRANCH_SET.includes(r.target) ? r.target : '';
     if (!target) return;
-    lines.push(RELATION_TEXT[r.type].replace('{pos}', POS_TEXT[r.pos]).replace('{target}', target));
+    const posText = student && STUDENT_POS_TEXT[r.pos] ? STUDENT_POS_TEXT[r.pos] : POS_TEXT[r.pos];
+    lines.push(RELATION_TEXT[r.type].replace('{pos}', posText).replace('{target}', target));
   });
   const fills = (Array.isArray(p.fills) ? p.fills : []).filter((e) => ELEMENT_SET.includes(e));
   const feeds = (Array.isArray(p.feeds) ? p.feeds : []).filter((e) => ELEMENT_SET.includes(e));
@@ -494,6 +500,9 @@ app.post('/api/fortune', requireAuth, async (req, res) => {
     }
     const element = pickFrom(ELEMENT_SET, req.body.element) || '토';
     const kind = scope === 'month' || scope === 'year' ? scope : 'day';
+    // Age 18 or under: the 'work' category becomes study luck, and everything stays age-appropriate.
+    const student = req.body.student === true;
+    const workName = student ? 'study (academics, exams, school life, learning habits)' : 'work (career/business)';
 
     const language = lang === 'en' ? 'English' : 'Korean';
     const okStem = (s) => (STEM_SET.includes(s) ? s : '?');
@@ -502,7 +511,7 @@ app.post('/api/fortune', requireAuth, async (req, res) => {
       ? `, hour pillar ${hourStem}${hourBranch}`
       : ' (birth hour unknown)';
 
-    const { chartText, periodText } = cleanChartFacts(chart, period);
+    const { chartText, periodText } = cleanChartFacts(chart, period, student);
     const chartIntro =
       `This person's chart: year pillar ${okStem(yearStem)}${okBranch(yearBranch)}, month pillar ${okStem(monthStem)}${okBranch(monthBranch)}, ` +
       `day pillar ${dayStem}${dayBranch}${hourPart}; the day master's element is ${element}. ${chartText}`;
@@ -513,7 +522,13 @@ app.post('/api/fortune', requireAuth, async (req, res) => {
       `Two people with different charts must get clearly different readings, so never write generic advice that would fit anyone. `;
     const tone =
       `Tone: warm, entertainment-only and constructive. Be honest about what to watch out for, but frame cautions as habits, timing and ` +
-      `choices to be careful with, never as fate. Do not make medical, illness, accident, death or lawsuit predictions. Call the tool with the result.`;
+      `choices to be careful with, never as fate. Do not make medical, illness, accident, death or lawsuit predictions. ` +
+      (student
+        ? `This person is a student aged 18 or under: the "work" category is about STUDY LUCK (concentration, exams, homework, study habits, school life), not a career or a business. ` +
+          `Keep everything age-appropriate and about school, study, friends and family; for "money" talk only about allowance, saving and spending habits (no investing or business), ` +
+          `and for "love" keep it innocent (friendship, getting along with peers, first feelings) with nothing romantic or adult. `
+        : '') +
+      `Call the tool with the result.`;
 
     let promptText;
     let tool;
@@ -535,7 +550,7 @@ app.post('/api/fortune', requireAuth, async (req, res) => {
         `You write short, warm, entertainment-only daily fortunes based on traditional Korean Saju (Four Pillars). ${chartIntro} ` +
         `Today's date is ${todayText}.${todayPillar ? ` Today's own day pillar (일진) is ${todayPillar}.` : ''} ` +
         `How today's pillar meets this person's chart: ${periodText} ` +
-        `Write today's reading in ${language} for exactly these four categories: work (career/business), money, love, health. ` +
+        `Write today's reading in ${language} for exactly these four categories: ${workName}, money, love, health. ` +
         `For each category give "text" (the favorable side, 1-2 concrete sentences) and "caution" (what to watch out for today, 1 concrete sentence). ` +
         personalize +
         `Start from this person's chart (who they are), then let today's pillar decide what is highlighted today. ` + tone;
@@ -558,7 +573,7 @@ app.post('/api/fortune', requireAuth, async (req, res) => {
         `Write the reading for ${when}.${pPillar ? ` This ${kind === 'month' ? 'month' : 'year'}'s own pillar is ${pPillar}.` : ''} ` +
         `How this ${kind === 'month' ? 'month' : 'year'}'s pillar meets this person's chart: ${periodText} ` +
         `Write in ${language}. Give "summaryGood" (the overall favorable flow, 1-2 sentences) and "summaryCaution" (the overall things to watch out for, 1-2 sentences), ` +
-        `then for each of work (career/business), money, love and health give one "good" sentence and one "caution" sentence. ` +
+        `then for each of ${workName}, money, love and health give one "good" sentence and one "caution" sentence. ` +
         `Keep every sentence concrete and short. ` + personalize + tone;
       tool = PERIOD_FORTUNE_TOOL;
       maxTokens = 1700;
