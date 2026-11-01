@@ -2617,10 +2617,29 @@ async function analyzePhoto(type){
 let currentUser = null;
 /* ---------------- PWA: service worker registration ---------------- */
 if ('serviceWorker' in navigator) {
+  // 이미 서비스워커가 있던 상태(=앱을 전에 실행한 적 있음)에서 새 버전이 활성화되면
+  // 화면을 한 번 새로고침해 최신 화면으로 바꾼다. 처음 설치할 때는 새로고침하지 않는다.
+  const hadController = !!navigator.serviceWorker.controller;
+  let reloadedForUpdate = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController || reloadedForUpdate) return;
+    reloadedForUpdate = true;
+    window.location.reload();
+  });
+
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch((err) => {
-      console.warn('서비스워커 등록 실패:', err);
-    });
+    // updateViaCache:'none' → sw.js를 확인할 때 휴대폰 캐시를 거치지 않고 항상 서버에 물어봄
+    navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' })
+      .then((reg) => {
+        reg.update().catch(() => {});
+        // 앱을 백그라운드에 두었다가 다시 열 때도 새 버전이 있는지 확인
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') reg.update().catch(() => {});
+        });
+      })
+      .catch((err) => {
+        console.warn('서비스워커 등록 실패:', err);
+      });
   });
 }
 

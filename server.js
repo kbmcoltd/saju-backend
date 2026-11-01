@@ -167,7 +167,19 @@ const PUBLIC_DIR = path.join(__dirname, 'public');
 // despite that, so it gets its own narrowly-scoped static mount instead of a
 // blanket `dotfiles: 'allow'` on the whole public dir.
 app.use('/.well-known', express.static(path.join(PUBLIC_DIR, '.well-known'), { dotfiles: 'allow' }));
-app.use(express.static(PUBLIC_DIR, { index: 'index.html' }));
+app.use(express.static(PUBLIC_DIR, {
+  index: 'index.html',
+  // The app screen, service worker and manifest must never be served from the phone's
+  // HTTP cache, otherwise an installed app keeps showing the old version after a deploy
+  // (users had to uninstall/reinstall to see updates). "no-cache" still allows a cheap
+  // 304 revalidation, so this costs almost nothing.
+  setHeaders: (res, filePath) => {
+    const name = path.basename(filePath);
+    if (name.endsWith('.html') || name === 'sw.js' || name === 'manifest.json') {
+      res.setHeader('Cache-Control', 'no-cache');
+    }
+  },
+}));
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
