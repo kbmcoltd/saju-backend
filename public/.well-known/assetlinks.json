@@ -1,8 +1,11 @@
 [{
-      "relation": ["delegate_permission/common.handle_all_urls"],
-      "target": {
-        "namespace": "android_app",
-        "package_name": "com.onrender.saju_lucky777.twa",
-        "sha256_cert_fingerprints": ["D2:50:CF:33:7A:62:3A:C5:8B:F7:BA:6B:55:C3:49:81:1D:98:C9:BE:DD:60:C4:65:A1:A2:BC:54:4F:08:A2:11"]
-      }
-    }]
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.onrender.saju_lucky777.twa",
+    "sha256_cert_fingerprints": [
+      "86:95:93:87:23:73:0F:A9:43:3C:E2:77:67:1C:DF:7B:73:71:5B:89:E2:C0:C9:B3:D8:C9:3C:87:B1:45:97:9C",
+      "D2:50:CF:33:7A:62:3A:C5:8B:F7:BA:6B:55:C3:49:81:1D:98:C9:BE:DD:60:C4:65:A1:A2:BC:54:4F:08:A2:11"
+    ]
+  }
+}]
