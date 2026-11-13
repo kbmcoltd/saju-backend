@@ -774,6 +774,13 @@
     </div>
 
     <div class="card card-light">
+      <h2 data-i18n="result.life.title">일생운 (초년·중년·말년)</h2>
+      <p class="desc" data-i18n="result.life.desc">사주 네 기둥으로 인생의 큰 흐름을 세 시기로 나누어 봤어요.</p>
+      <div class="fortune-items" id="life-items"></div>
+      <div class="fortune-date" id="life-date"></div>
+    </div>
+
+    <div class="card card-light">
       <h2 data-i18n="result.lucky.title">행운의 숫자 10</h2>
       <p class="desc" data-i18n="result.lucky.desc">사주 여덟 글자의 기운으로 뽑은 오늘의 행운 숫자예요.</p>
       <div class="ball-grid" id="lucky10-wrap"></div>
@@ -921,6 +928,18 @@ const TRANSLATIONS = {
   'result.fortune.title': { ko: '오늘의 사주 운세', en: "Today's Fortune" },
   'result.month.title': { ko: '이달의 사주 운세', en: "This Month's Fortune" },
   'result.year.title': { ko: '올해의 사주 운세', en: "This Year's Fortune" },
+  'result.life.title': { ko: '일생운 (초년·중년·말년)', en: 'Life Fortune (Early · Middle · Later Years)' },
+  'result.life.desc': { ko: '사주 네 기둥으로 인생의 큰 흐름을 세 시기로 나누어 봤어요.', en: 'Your four pillars read as the big flow of your life, in three stages.' },
+  'life.early': { ko: '🌱 초년운 (태어나서 ~30세 무렵)', en: '🌱 Early Years (birth to about 30)' },
+  'life.middle': { ko: '☀️ 중년운 (30대 ~ 50대)', en: '☀️ Middle Years (30s to 50s)' },
+  'life.late': { ko: '🍂 말년운 (60세 이후)', en: '🍂 Later Years (60 and beyond)' },
+  'life.basis': { ko: '{pillar} 기준 · {sip}', en: 'Based on {pillar} · {sip}' },
+  'life.pos.early': { ko: '연주', en: 'year pillar' },
+  'life.pos.middle': { ko: '일주', en: 'day pillar' },
+  'life.pos.late': { ko: '시주', en: 'hour pillar' },
+  'life.pos.lateNoHour': { ko: '월주', en: 'month pillar' },
+  'life.noHour': { ko: '태어난 시간을 몰라 말년운은 월주로 대신 봤어요. 시간을 입력하면 더 정확해져요.', en: 'Birth hour unknown, so later years are read from the month pillar. Add your birth hour for a sharper reading.' },
+  'life.note': { ko: '일생운은 타고난 사주로 보는 큰 흐름이라 날짜가 바뀌어도 달라지지 않아요.', en: 'Your life fortune comes from your birth chart, so it does not change with the date.' },
   'result.period.note': { ko: '좋은 흐름과 조심할 점을 함께 보여드려요. 조심할 점은 불안을 주려는 게 아니라 미리 대비하라는 참고 신호예요.', en: 'We show both the good flow and the things to watch out for. Cautions are gentle heads-ups to prepare, not predictions to worry about.' },
   'fortune.summary.good': { ko: '✨ 좋은 흐름', en: '✨ Good Flow' },
   'fortune.summary.caution': { ko: '⚠️ 조심할 점', en: '⚠️ Watch Out For' },
@@ -2162,6 +2181,100 @@ function applyAIToReading(reading, ai){
   return { ...reading, summaryGood: ai.summaryGood, summaryCaution: ai.summaryCaution, cats };
 }
 
+/* ---------------- 일생운: 초년 / 중년 / 말년 ----------------
+   Traditional reading of the four pillars as life stages: the year pillar shows the early
+   years, the day pillar (the branch under the day master = home, partner) the middle years,
+   and the hour pillar the later years. Each stage's ten god (relative to the day master)
+   gives a local, deterministic reading; the AI then rewrites it for this specific chart.
+   The day branch's ten god uses its main hidden stem (지장간 정기). */
+const BRANCH_MAIN_STEM = [9,5,0,1,4,2,3,5,6,7,4,8]; // 자계 축기 인갑 묘을 진무 사병 오정 미기 신경 유신 술무 해임
+const LIFE_STAGES = ['early','middle','late'];
+
+function getLifeStages(saju){
+  const ds = saju.day.stemIdx;
+  const noHour = !saju.hour;
+  return {
+    noHour,
+    early:  { pos:'early',  pillar:saju.year,  sip:getSipsung(ds, saju.year.stemIdx) },
+    middle: { pos:'middle', pillar:saju.day,   sip:getSipsung(ds, BRANCH_MAIN_STEM[saju.day.branchIdx]) },
+    late:   noHour
+      ? { pos:'lateNoHour', pillar:saju.month, sip:getSipsung(ds, saju.month.stemIdx) }
+      : { pos:'late',   pillar:saju.hour,  sip:getSipsung(ds, saju.hour.stemIdx) }
+  };
+}
+
+function buildLifeReading(saju){
+  const st = getLifeStages(saju);
+  const isEn = currentLang==='en';
+  const items = LIFE_STAGES.map(k=>{
+    const s = st[k];
+    const src = isEn ? SIPSUNG_TEXTS_EN[s.sip] : SIPSUNG_TEXTS[s.sip];
+    const pillarText = isEn ? `${t('life.pos.'+s.pos)} ${romanizePillar(s.pillar)}`
+      : `${t('life.pos.'+s.pos)} ${s.pillar.stem}${s.pillar.branch}(${s.pillar.stemHanja}${s.pillar.branchHanja})`;
+    const sipText = isEn ? `${SIPSUNG_EN[s.sip]} (${SIPSUNG_HANJA[s.sip]})` : `${s.sip}(${SIPSUNG_HANJA[s.sip]})`;
+    return { stage:k, sip:s.sip, basis: t('life.basis', { pillar: pillarText, sip: sipText }), good: src.good, caution: src.caution };
+  });
+  return { noHour: st.noHour, items };
+}
+
+function renderLifeCard(reading, pending){
+  const wrap = document.getElementById('life-items');
+  wrap.innerHTML = '';
+  reading.items.forEach(it=>{
+    const row = document.createElement('div');
+    row.className = 'fortune-item';
+    const label = document.createElement('div');
+    label.className = 'fortune-item-label';
+    label.textContent = t('life.'+it.stage);
+    const basis = document.createElement('div');
+    basis.className = 'fortune-date';
+    basis.style.marginTop = '0';
+    basis.textContent = it.basis;
+    const good = document.createElement('div');
+    good.className = 'fortune-good';
+    good.textContent = it.good;
+    row.append(label, basis, good, makeCautionEl(it.caution));
+    wrap.appendChild(row);
+  });
+  const notes = [];
+  if(reading.noHour) notes.push(t('life.noHour'));
+  notes.push(t('life.note'));
+  if(pending) notes.push(t('fortune.aiPending'));
+  document.getElementById('life-date').textContent = notes.join(' ');
+}
+
+// AI-written life reading, cached per chart + language (it never changes with the date).
+async function getLifeAI(user, chart){
+  const sig = chartSignature(user.saju);
+  const who = isStudentAge() ? 's' : 'w';
+  const key = `${sig}-${who}-${currentLang}`;
+  user.periodAI = user.periodAI || {};
+  const cached = user.periodAI.life;
+  if(cached && cached.key===key && cached.data) return cached.data;
+
+  const st = getLifeStages(user.saju);
+  const payload = {
+    scope: 'life',
+    student: isStudentAge(),
+    ...sajuPayload(user.saju),
+    element: chart.dayEl,
+    chart: { elements: chart.counts, strength: chart.strength, lacking: chart.lacking, excess: chart.excess },
+    life: { early: st.early.sip, middle: st.middle.sip, late: st.late.sip, noHour: st.noHour }
+  };
+  const data = await apiPost(FORTUNE_ENDPOINT, payload);
+  if(!data || !Array.isArray(data.stages) || !LIFE_STAGES.every(k=>data.stages.some(s=>s.stage===k && s.good && s.caution))) throw new Error(t('err.noAiResult'));
+  user.periodAI.life = { key, data };
+  await saveUser(user);
+  return data;
+}
+
+function applyAIToLife(reading, ai){
+  return { ...reading, items: reading.items.map(it=>{
+    const f = ai.stages.find(s=>s.stage===it.stage);
+    return f ? { ...it, good: f.good, caution: f.caution } : it;
+  }) };
+}
+
 let resultRenderSeq = 0;
 
 async function getTodaysFortune(user, chart, dayPA){
@@ -2366,6 +2479,16 @@ async function renderResult(){
         if(seq===resultRenderSeq) draw(reading, false);
       });
   });
+
+  // 일생운 (초년·중년·말년): local reading first, AI wording replaces it when ready.
+  const lifeReading = buildLifeReading(saju);
+  renderLifeCard(lifeReading, true);
+  getLifeAI(currentUser, chart)
+    .then(ai=>{ if(seq===resultRenderSeq) renderLifeCard(applyAIToLife(lifeReading, ai), false); })
+    .catch(e=>{
+      console.error('일생운 AI 생성 실패, 기본 풀이를 유지합니다:', e);
+      if(seq===resultRenderSeq) renderLifeCard(lifeReading, false);
+    });
 
   // Today's cautions come from the same ten-god reading, using today's day pillar.
   const dayReading = buildPeriodReading(saju, periods.day);
