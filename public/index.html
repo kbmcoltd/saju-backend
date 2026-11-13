@@ -508,6 +508,7 @@
   }
   .hub-icon-gold{background:linear-gradient(135deg,var(--gold-soft),var(--gold));}
   .hub-icon-teal{background:linear-gradient(135deg,#7fd9c4,var(--teal));}
+  .hub-icon-green{background:linear-gradient(135deg,#a8e6a1,#3f9b4f);}
   .hub-icon-vermilion{background:linear-gradient(135deg,#e88a6a,var(--vermilion));}
   .hub-label{
     font-family:'Noto Serif KR',serif;
@@ -663,7 +664,14 @@
         <div class="hub-icon hub-icon-gold">☀️</div>
         <div>
           <div class="hub-label" data-i18n="home.saju.label">사주팔자</div>
-          <div class="hub-sub" data-i18n="home.saju.sub">생년월일시로 보는 사주와 행운번호</div>
+          <div class="hub-sub" data-i18n="home.saju.sub">생년월일시로 보는 오늘·이달·올해·일생 운세</div>
+        </div>
+      </button>
+      <button class="hub-card" onclick="goToLucky()">
+        <div class="hub-icon hub-icon-green">🍀</div>
+        <div>
+          <div class="hub-label" data-i18n="home.lucky.label">오늘의 추천번호</div>
+          <div class="hub-sub" data-i18n="home.lucky.sub">내 사주 기운으로 뽑은 오늘의 행운번호</div>
         </div>
       </button>
       <button class="hub-card" onclick="goToPalm()">
@@ -794,22 +802,41 @@
       <div class="fortune-date" id="life-date"></div>
     </div>
 
+    <div class="disclaimer" data-i18n="result.disclaimer" style="margin:4px 6px 14px;">
+      본 결과는 전통 명리학 이론을 간단화하여 재미로 제공하는 콘텐츠입니다. 실제 만세력과 다를 수 있으며, 어떠한 결과도 보장하지 않습니다.
+    </div>
+
+    <button class="btn-ghost" data-i18n="result.reenter" onclick="showScreen('birth')">생년월일시 다시 입력</button>
+    <button class="btn-ghost" data-i18n="result.toHome" onclick="showScreen('home')">홈으로</button>
+  </div>
+
+  <!-- LUCKY NUMBERS -->
+  <div id="screen-lucky" class="screen hidden">
+    <div class="top-actions">
+      <div class="greet"><b id="lucky-name-slot"></b><span data-i18n="greet.suffix.lucky">님의 오늘의 추천번호</span></div>
+      <div class="top-actions-btns">
+        <button class="logout" data-i18n="nav.home" onclick="showScreen('home')">홈</button>
+        <button class="logout" data-i18n="nav.logout" onclick="logout()">로그아웃</button>
+      </div>
+    </div>
+
     <div class="card card-light">
       <h2 data-i18n="result.lucky.title">행운의 숫자 10</h2>
       <p class="desc" data-i18n="result.lucky.desc">사주 여덟 글자의 기운으로 뽑은 오늘의 행운 숫자예요.</p>
       <div class="ball-grid" id="lucky10-wrap"></div>
+      <div class="fortune-date" id="lucky-date"></div>
     </div>
 
     <div class="card card-light">
       <h2 data-i18n="result.sets.title">추천 조합 5세트</h2>
       <p class="desc" data-i18n="result.sets.desc">행운의 숫자 10개 중 6개씩 조합한 다섯 세트를 한눈에 볼 수 있어요.</p>
       <div class="combo-table" id="sets-wrap"></div>
-      <div class="disclaimer" data-i18n="result.disclaimer">
-        본 결과는 전통 명리학 이론을 간단화하여 재미로 제공하는 콘텐츠입니다. 실제 만세력과 다를 수 있으며, 어떠한 결과도 보장하지 않습니다.
+      <div class="disclaimer" data-i18n="lucky.disclaimer">
+        추천번호는 사주 기운을 바탕으로 재미로 뽑은 번호이며, 당첨을 보장하지 않습니다. 매일 새로운 번호가 나와요.
       </div>
     </div>
 
-    <button class="btn-ghost" data-i18n="result.reenter" onclick="showScreen('birth')">생년월일시 다시 입력</button>
+    <button class="btn-ghost" data-i18n="lucky.toSaju" onclick="goToSaju()">내 사주팔자 보기</button>
     <button class="btn-ghost" data-i18n="result.toHome" onclick="showScreen('home')">홈으로</button>
   </div>
 
@@ -917,7 +944,12 @@ const TRANSLATIONS = {
   'greet.suffix.face': { ko: '님의 관상', en: "'s Face Reading" },
   'home.lead': { ko: '오늘은 무엇을 봐드릴까요?', en: 'What would you like to see today?' },
   'home.saju.label': { ko: '사주팔자', en: 'Saju (Four Pillars)' },
-  'home.saju.sub': { ko: '생년월일시로 보는 사주와 행운번호', en: 'Your destiny chart & lucky numbers by birth date' },
+  'home.saju.sub': { ko: '생년월일시로 보는 오늘·이달·올해·일생 운세', en: 'Your destiny chart: today, this month, this year and life' },
+  'home.lucky.label': { ko: '오늘의 추천번호', en: "Today's Lucky Numbers" },
+  'home.lucky.sub': { ko: '내 사주 기운으로 뽑은 오늘의 행운번호', en: "Lucky numbers drawn from your chart's energy today" },
+  'greet.suffix.lucky': { ko: '님의 오늘의 추천번호', en: "'s Lucky Numbers" },
+  'lucky.disclaimer': { ko: '추천번호는 사주 기운을 바탕으로 재미로 뽑은 번호이며, 당첨을 보장하지 않습니다. 매일 새로운 번호가 나와요.', en: 'These numbers are drawn from your chart for fun and do not guarantee any win. New numbers appear every day.' },
+  'lucky.toSaju': { ko: '내 사주팔자 보기', en: 'See My Saju' },
   'home.palm.label': { ko: '손금 보기', en: 'Palm Reading' },
   'home.palm.sub': { ko: '손바닥 사진으로 보는 AI 손금', en: 'AI palm reading from a photo of your hand' },
   'home.palm.hand': { ko: '왼손(선천운), 오른손(후천운)', en: 'Left hand (innate luck), right hand (acquired luck)' },
@@ -1068,6 +1100,9 @@ function setLang(lang){
   if(currentUser && currentUser.birth && currentUser.saju && !document.getElementById('screen-result').classList.contains('hidden')){
     renderResult();
   }
+  if(currentUser && currentUser.saju && !document.getElementById('screen-lucky').classList.contains('hidden')){
+    renderLucky();
+  }
   refreshLeapHintGlobal && refreshLeapHintGlobal();
 }
 
@@ -1143,7 +1178,7 @@ let suppressHistoryPush = false;
 
 function showScreen(name, opts){
   opts = opts || {};
-  ['signup','login','reset','home','birth','result','palm','face'].forEach(s=>{
+  ['signup','login','reset','home','birth','result','lucky','palm','face'].forEach(s=>{
     document.getElementById('screen-'+s).classList.toggle('hidden', s!==name);
   });
   window.scrollTo(0,0);
@@ -1320,19 +1355,52 @@ async function enterAfterAuth(){
   document.getElementById('home-name-slot').textContent = currentUser.name;
   document.getElementById('birth-name-slot').textContent = currentUser.name;
   document.getElementById('result-name-slot').textContent = currentUser.name;
+  document.getElementById('lucky-name-slot').textContent = currentUser.name;
   document.getElementById('palm-name-slot').textContent = currentUser.name;
   document.getElementById('face-name-slot').textContent = currentUser.name;
   showScreen('home', { replace:true });
 }
 
 async function goToSaju(){
-  if(currentUser.birth && currentUser.saju && currentUser.lucky && currentUser.sets){
+  afterBirthTarget = 'result';
+  if(currentUser.birth && currentUser.saju){
     selectFortuneTab('day');
     await renderResult();
     showScreen('result');
   } else {
     showScreen('birth');
   }
+}
+// 오늘의 추천번호: needs the birth chart, so ask for it first if it is missing and
+// come back here right after the birth info is saved.
+let afterBirthTarget = 'result';
+async function goToLucky(){
+  if(currentUser.birth && currentUser.saju){
+    await renderLucky();
+    showScreen('lucky');
+  } else {
+    afterBirthTarget = 'lucky';
+    showScreen('birth');
+  }
+}
+async function renderLucky(){
+  // Lucky numbers refresh once per day: if we last generated them on a previous day
+  // (or never), re-roll with today's date baked into the seed and persist.
+  if(!currentUser.lucky || !currentUser.sets || currentUser.luckyDate !== getTodayKey()){
+    const {lucky10, sets} = generateLucky(getLuckySeed(currentUser));
+    currentUser.lucky = lucky10;
+    currentUser.sets = sets;
+    currentUser.luckyDate = getTodayKey();
+    await saveUser(currentUser);
+  }
+  document.getElementById('lucky10-wrap').innerHTML = currentUser.lucky.map(n=>`<div class="ball">${n}</div>`).join('');
+  document.getElementById('sets-wrap').innerHTML = currentUser.sets.map(set=>`<div class="combo-row">
+      <div class="combo-balls">${set.map(n=>`<div class="ball">${n}</div>`).join('')}</div>
+    </div>`).join('');
+  const now = new Date();
+  document.getElementById('lucky-date').textContent = currentLang==='en'
+    ? `For ${now.getMonth()+1}/${now.getDate()}/${now.getFullYear()}`
+    : `${now.getFullYear()}년 ${now.getMonth()+1}월 ${now.getDate()}일 기준`;
 }
 function goToPalm(){ resetPhotoScreen('palm'); showScreen('palm'); }
 function goToFace(){ resetPhotoScreen('face'); showScreen('face'); }
@@ -2400,6 +2468,12 @@ async function handleBirthSubmit(){
   currentUser.luckyDate = getTodayKey();
   await saveUser(currentUser);
 
+  if(afterBirthTarget==='lucky'){
+    afterBirthTarget = 'result';
+    await renderLucky();
+    showScreen('lucky');
+    return;
+  }
   selectFortuneTab('day');
   await renderResult();
   showScreen('result');
@@ -2449,26 +2523,6 @@ async function renderResult(){
     monthGZ: romanizePillar(saju.month),
     hourPart
   });
-
-  // Lucky numbers refresh once per day: if we last generated them on a
-  // previous day, re-roll with today's date baked into the seed and persist.
-  if(currentUser.luckyDate !== getTodayKey()){
-    const {lucky10, sets} = generateLucky(getLuckySeed(currentUser));
-    currentUser.lucky = lucky10;
-    currentUser.sets = sets;
-    currentUser.luckyDate = getTodayKey();
-    await saveUser(currentUser);
-  }
-
-  const luckyWrap = document.getElementById('lucky10-wrap');
-  luckyWrap.innerHTML = currentUser.lucky.map(n=>`<div class="ball">${n}</div>`).join('');
-
-  const setsWrap = document.getElementById('sets-wrap');
-  setsWrap.innerHTML = currentUser.sets.map((set,i)=>{
-    return `<div class="combo-row">
-      <div class="combo-balls">${set.map(n=>`<div class="ball">${n}</div>`).join('')}</div>
-    </div>`;
-  }).join('');
 
   // Fortune text comes from the AI backend and can take a moment, so show a
   // lightweight loading state first instead of leaving the section blank.
