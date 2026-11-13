@@ -182,6 +182,8 @@
     font-weight:500;
     transition:all .15s;
   }
+  .fortune-tabs .cal-toggle-btn{ padding:13px 0; font-size:15px; }
+  .fortune-tabs-card{ margin-bottom:12px; }
   .cal-toggle-btn.active{
     background:linear-gradient(135deg,var(--gold-soft),var(--gold));
     color:#211a08;
@@ -749,22 +751,34 @@
       <div class="saju-summary" id="saju-summary"></div>
     </div>
 
-    <div class="card card-light">
+    <div class="card card-light fortune-tabs-card">
+      <h2 data-i18n="result.tabs.title">운세 보기</h2>
+      <p class="desc" data-i18n="result.tabs.desc">보고 싶은 운세를 눌러 주세요.</p>
+      <div class="cal-toggle fortune-tabs">
+        <button type="button" class="cal-toggle-btn active" data-tab="day" data-i18n="result.tab.day" onclick="selectFortuneTab('day')">오늘</button>
+        <button type="button" class="cal-toggle-btn" data-tab="month" data-i18n="result.tab.month" onclick="selectFortuneTab('month')">이달</button>
+        <button type="button" class="cal-toggle-btn" data-tab="year" data-i18n="result.tab.year" onclick="selectFortuneTab('year')">올해</button>
+        <button type="button" class="cal-toggle-btn" data-tab="life" data-i18n="result.tab.life" onclick="selectFortuneTab('life')">일생</button>
+      </div>
+    </div>
+
+    <div class="card card-light fortune-panel" id="fortune-panel-day">
       <h2 data-i18n="result.fortune.title">오늘의 사주 운세</h2>
       <div id="fortune-tag-wrap"></div>
       <div class="fortune-items" id="fortune-items"></div>
       <div class="fortune-date" id="fortune-date"></div>
     </div>
 
-    <div class="card card-light">
+    <div class="card card-light fortune-panel hidden" id="fortune-panel-month">
       <h2 data-i18n="result.month.title">이달의 사주 운세</h2>
       <div id="month-tag-wrap"></div>
       <div id="month-summary"></div>
       <div class="fortune-items" id="month-items"></div>
       <div class="fortune-date" id="month-date"></div>
+      <div class="period-note" data-i18n="result.period.note">좋은 흐름과 조심할 점을 함께 보여드려요. 조심할 점은 불안을 주려는 게 아니라 미리 대비하라는 참고 신호예요.</div>
     </div>
 
-    <div class="card card-light">
+    <div class="card card-light fortune-panel hidden" id="fortune-panel-year">
       <h2 data-i18n="result.year.title">올해의 사주 운세</h2>
       <div id="year-tag-wrap"></div>
       <div id="year-summary"></div>
@@ -773,7 +787,7 @@
       <div class="period-note" data-i18n="result.period.note">좋은 흐름과 조심할 점을 함께 보여드려요. 조심할 점은 불안을 주려는 게 아니라 미리 대비하라는 참고 신호예요.</div>
     </div>
 
-    <div class="card card-light">
+    <div class="card card-light fortune-panel hidden" id="fortune-panel-life">
       <h2 data-i18n="result.life.title">일생운 (초년·중년·말년)</h2>
       <p class="desc" data-i18n="result.life.desc">사주 네 기둥으로 인생의 큰 흐름을 세 시기로 나누어 봤어요.</p>
       <div class="fortune-items" id="life-items"></div>
@@ -928,6 +942,12 @@ const TRANSLATIONS = {
   'result.fortune.title': { ko: '오늘의 사주 운세', en: "Today's Fortune" },
   'result.month.title': { ko: '이달의 사주 운세', en: "This Month's Fortune" },
   'result.year.title': { ko: '올해의 사주 운세', en: "This Year's Fortune" },
+  'result.tabs.title': { ko: '운세 보기', en: 'Your Fortune' },
+  'result.tabs.desc': { ko: '보고 싶은 운세를 눌러 주세요.', en: 'Tap the fortune you want to see.' },
+  'result.tab.day': { ko: '오늘', en: 'Today' },
+  'result.tab.month': { ko: '이달', en: 'Month' },
+  'result.tab.year': { ko: '올해', en: 'Year' },
+  'result.tab.life': { ko: '일생', en: 'Life' },
   'result.life.title': { ko: '일생운 (초년·중년·말년)', en: 'Life Fortune (Early · Middle · Later Years)' },
   'result.life.desc': { ko: '사주 네 기둥으로 인생의 큰 흐름을 세 시기로 나누어 봤어요.', en: 'Your four pillars read as the big flow of your life, in three stages.' },
   'life.early': { ko: '🌱 초년운 (태어나서 ~30세 무렵)', en: '🌱 Early Years (birth to about 30)' },
@@ -1307,6 +1327,7 @@ async function enterAfterAuth(){
 
 async function goToSaju(){
   if(currentUser.birth && currentUser.saju && currentUser.lucky && currentUser.sets){
+    selectFortuneTab('day');
     await renderResult();
     showScreen('result');
   } else {
@@ -2275,6 +2296,16 @@ function applyAIToLife(reading, ai){
   }) };
 }
 
+// 오늘 / 이달 / 올해 / 일생: only the selected fortune card is shown.
+const FORTUNE_TABS = ['day','month','year','life'];
+let currentFortuneTab = 'day';
+function selectFortuneTab(tab){
+  if(!FORTUNE_TABS.includes(tab)) tab = 'day';
+  currentFortuneTab = tab;
+  document.querySelectorAll('.fortune-tabs .cal-toggle-btn').forEach(b=> b.classList.toggle('active', b.dataset.tab===tab));
+  FORTUNE_TABS.forEach(k=> document.getElementById('fortune-panel-'+k).classList.toggle('hidden', k!==tab));
+}
+
 let resultRenderSeq = 0;
 
 async function getTodaysFortune(user, chart, dayPA){
@@ -2369,6 +2400,7 @@ async function handleBirthSubmit(){
   currentUser.luckyDate = getTodayKey();
   await saveUser(currentUser);
 
+  selectFortuneTab('day');
   await renderResult();
   showScreen('result');
 }
