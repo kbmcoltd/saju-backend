@@ -461,6 +461,30 @@ const PERIOD_FORTUNE_TOOL = {
   },
 };
 
+const LIFE_STAGE_KEYS = ['early', 'middle', 'late'];
+const LIFE_FORTUNE_TOOL = {
+  name: 'submit_life_fortune',
+  description: 'Submit a lifetime Saju reading split into early, middle and later years, each with good points and cautions.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      stages: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            stage: { type: 'string', enum: LIFE_STAGE_KEYS },
+            good: { type: 'string', description: 'The favorable flow of this life stage, 2-3 sentences.' },
+            caution: { type: 'string', description: 'What to watch out for in this life stage, 1-2 sentences.' },
+          },
+          required: ['stage', 'good', 'caution'],
+        },
+      },
+    },
+    required: ['stages'],
+  },
+};
+
 // Everything from the request that reaches the prompt is checked against a fixed list or
 // is a bounded integer, so a crafted request cannot slip free text into the prompt.
 function pickFrom(set, v) {
@@ -513,7 +537,7 @@ app.post('/api/fortune', requireAuth, async (req, res) => {
       return res.status(400).json({ error: errMsg('invalidSajuData', lang) });
     }
     const element = pickFrom(ELEMENT_SET, req.body.element) || '토';
-    const kind = scope === 'month' || scope === 'year' ? scope : 'day';
+    const kind = scope === 'month' || scope === 'year' || scope === 'life' ? scope : 'day';
     // Age 18 or under: the 'work' category becomes study luck, and everything stays age-appropriate.
     const student = req.body.student === true;
     const workName = student ? 'study (academics, exams, school life, learning habits)' : 'work (career/business)';
@@ -547,6 +571,53 @@ app.post('/api/fortune', requireAuth, async (req, res) => {
     let promptText;
     let tool;
     let maxTokens;
+
+    if (kind === 'life') {
+      const lf = req.body.life && typeof req.body.life === 'object' ? req.body.life : {};
+      const sipE = pickFrom(SIPSUNG_SET, lf.early);
+      const sipM = pickFrom(SIPSUNG_SET, lf.middle);
+      const sipL = pickFrom(SIPSUNG_SET, lf.late);
+      const noHour = lf.noHour === true;
+      const stageFacts =
+        `Early years (birth to about 30) are read from the year pillar ${okStem(yearStem)}${okBranch(yearBranch)}` +
+        (sipE ? `, whose stem is the "${sipE}" ten god` : '') + '. ' +
+        `Middle years (30s to 50s) are read from the day pillar ${dayStem}${dayBranch}, home and partner` +
+        (sipM ? `; the day branch's main hidden stem is the "${sipM}" ten god` : '') + '. ' +
+        (noHour
+          ? `The birth hour is unknown, so later years (60 and beyond) are read from the month pillar ${okStem(monthStem)}${okBranch(monthBranch)}`
+          : `Later years (60 and beyond) are read from the hour pillar ${okStem(hourStem)}${okBranch(hourBranch)}`) +
+        (sipL ? `, whose stem is the "${sipL}" ten god` : '') + '.';
+
+      promptText =
+        `You write warm, entertainment-only lifetime fortunes (일생운) based on traditional Korean Saju (Four Pillars). ${chartIntro} ` +
+        `${stageFacts} ` +
+        `Write in ${language} a reading for each of the three life stages: "early" (초년운), "middle" (중년운) and "late" (말년운). ` +
+        `For each stage give "good" (the favorable flow of that stage: study, career, wealth, relationships and family as they fit the stage, 2-3 sentences) ` +
+        `and "caution" (what to watch out for in that stage, 1-2 sentences). Make the three stages read as one life story that develops over time. ` +
+        `Ground every point in this person's own chart and the pillar and ten god of each stage, and say concretely what drives it. ` +
+        `Two people with different charts must get clearly different readings, so never write generic advice that would fit anyone. ` +
+        `Tone: warm, entertainment-only and constructive. Be honest about what to watch out for, but frame cautions as habits, timing and ` +
+        `choices to be careful with, never as fate. Do not make medical, illness, accident, death, divorce or lawsuit predictions, and do not state a lifespan. ` +
+        (student ? `This person is a student aged 18 or under: keep everything age-appropriate and encouraging, with nothing romantic or adult. ` : '') +
+        `Call the tool with the result.`;
+
+      const message = await anthropic.messages.create({
+        model: CLAUDE_MODEL,
+        max_tokens: 1500,
+        tools: [LIFE_FORTUNE_TOOL],
+        tool_choice: { type: 'tool', name: LIFE_FORTUNE_TOOL.name },
+        messages: [{ role: 'user', content: promptText }],
+      });
+      const toolUse = (message.content || []).find((block) => block.type === 'tool_use');
+      const stages = toolUse && toolUse.input && Array.isArray(toolUse.input.stages) ? toolUse.input.stages : [];
+      const str = (v) => (v ? String(v).trim() : '');
+      const cleaned = LIFE_STAGE_KEYS.map((k) => {
+        const f = stages.find((it) => it && it.stage === k);
+        return { stage: k, good: str(f && f.good), caution: str(f && f.caution) };
+      });
+      if (!cleaned.every((it) => it.good && it.caution)) return res.status(502).json({ error: errMsg('noAiResult', lang) });
+      return res.json({ stages: cleaned });
+    }
 
     if (kind === 'day') {
       // Today's date: use the client's local date when it is a well-formed Y-M-D (so it
