@@ -1170,6 +1170,18 @@ async function apiGet(path){
 async function hydrateCurrentUser(authData){
   const cached = (await loadUser(authData.phone)) || { birth:null, saju:null, lucky:null, sets:null };
   currentUser = { ...cached, name: authData.name, phone: authData.phone };
+  // Saju saved by an older version used calendar-month boundaries; always recompute it from
+  // the saved (solar) birth date so everyone gets the 절기-based pillars. If the chart changed,
+  // drop the AI texts cached for the old chart.
+  const b = currentUser.birth;
+  if(b && b.y && b.m && b.d && b.hourVal!==undefined){
+    const fresh = computeSaju(b.y, b.m, b.d, b.hourVal);
+    if(JSON.stringify(fresh)!==JSON.stringify(currentUser.saju)){
+      currentUser.saju = fresh;
+      currentUser.periodAI = {};
+      currentUser.luckyDate = null;
+    }
+  }
   await saveUser(currentUser);
 }
 
@@ -1610,11 +1622,50 @@ function getYearPillar(year){
   return pillarFromIdx(year-4, year-4);
 }
 
-function getMonthPillar(year, month, yearStemIdx){
-  const monthBranchIdx = (month+1)%12; // approx: Jan->축(1) ... Feb->인(2)
-  const monthStemIdx = ((yearStemIdx%5)*2 + month + 1) % 10; // simplified 오호둔월법 approximation
-  return pillarFromIdx(monthStemIdx, monthBranchIdx);
+/* ---------------- 절기 (solar terms) ----------------
+   In 명리학 the year pillar changes at 입춘 (sun at 315°) and each month pillar at its 절
+   (입춘·경칩·청명·입하·망종·소서·입추·백로·한로·입동·대설·소한, every 30° of the sun's
+   ecliptic longitude) - not on 1 January, the 1st of each month, or 설날.
+   So we compute where the sun is at the birth moment (Meeus, "Astronomical Algorithms"
+   low-precision formula, accurate to about 0.01° ≈ 15 minutes) and read the pillars off it.
+   Lunar birthdays are first converted to the solar date, then go through the same path. */
+function julianDayUTC(y, m, d, hourUTC){
+  if(m<=2){ y-=1; m+=12; }
+  const A = Math.floor(y/100), B = 2 - A + Math.floor(A/4);
+  return Math.floor(365.25*(y+4716)) + Math.floor(30.6001*(m+1)) + d + B - 1524.5 + hourUTC/24;
 }
+function sunLongitude(jd){
+  const T = (jd - 2451545.0)/36525;
+  const rad = Math.PI/180;
+  const L0 = 280.46646 + 36000.76983*T + 0.0003032*T*T;
+  const M = (357.52911 + 35999.05029*T - 0.0001537*T*T) * rad;
+  const C = (1.914602 - 0.004817*T - 0.000014*T*T)*Math.sin(M)
+          + (0.019993 - 0.000101*T)*Math.sin(2*M) + 0.000289*Math.sin(3*M);
+  const omega = (125.04 - 1934.136*T) * rad;
+  const lambda = L0 + C - 0.00569 - 0.00478*Math.sin(omega);
+  return ((lambda % 360) + 360) % 360;
+}
+// Year and month pillars for a moment in Korea time (KST, UTC+9); hourKST may be fractional.
+// Month offset 0 = 인월 (from 입춘) … 10 = 자월 (from 대설), 11 = 축월 (from 소한).
+function getSolarTermPillars(y, m, d, hourKST){
+  const lambda = sunLongitude(julianDayUTC(y, m, d, hourKST - 9));
+  const offset = Math.floor((((lambda - 315) % 360) + 360) % 360 / 30);
+  // January and early February (still 자월/축월, before 입춘) belong to the previous saju year.
+  const sajuYear = (m<=2 && offset>=10) ? y-1 : y;
+  const yearP = getYearPillar(sajuYear);
+  const inStem = ((yearP.stemIdx%5)*2 + 2) % 10; // 오호둔월법: 갑기년 병인월, 을경년 무인월 …
+  const monthP = pillarFromIdx(inStem + offset, offset + 2);
+  return { year: yearP, month: monthP };
+}
+// Representative clock time for a birth hour choice: the middle of that 시 (자시 → 00:00,
+// 축시 → 02:00 …), or noon when the hour is unknown.
+function birthHourKST(hourVal){
+  if(hourVal==='unknown' || hourVal===null || hourVal===undefined || hourVal==='') return 12;
+  const b = parseInt(hourVal);
+  return isNaN(b) ? 12 : (b*2) % 24;
+}
+
+
 
 function getDayPillar(y,m,d){
   // Reference-anchored 60갑자 (sexagenary cycle) day count; offset=0 corresponds to 갑자일.
@@ -1630,8 +1681,7 @@ function getHourPillar(dayStemIdx, hourBranchIdx){
 }
 
 function computeSaju(y,m,d,hourVal){
-  const yearP = getYearPillar(y);
-  const monthP = getMonthPillar(y,m,yearP.stemIdx);
+  const { year: yearP, month: monthP } = getSolarTermPillars(y, m, d, birthHourKST(hourVal));
   const dayP = getDayPillar(y,m,d);
   const hourBranchIdx = hourVal==='unknown' ? null : parseInt(hourVal);
   const hourP = getHourPillar(dayP.stemIdx, hourBranchIdx);
@@ -2122,10 +2172,12 @@ function buildPeriodReading(saju, pillar){
 function getPeriodPillars(){
   const now = new Date();
   const y = now.getFullYear(), m = now.getMonth()+1, d = now.getDate();
-  const yearP = getYearPillar(y);
+  // 올해 / 이달 운세 follow the 절기 too: this "year" starts at 입춘, this "month" at its 절.
+  const kst = new Date(now.getTime() + 9*3600000);
+  const tp = getSolarTermPillars(kst.getUTCFullYear(), kst.getUTCMonth()+1, kst.getUTCDate(), kst.getUTCHours() + kst.getUTCMinutes()/60);
   return {
-    year: yearP,
-    month: getMonthPillar(y, m, yearP.stemIdx),
+    year: tp.year,
+    month: tp.month,
     day: getDayPillar(y, m, d),
     y, m, d
   };
@@ -2279,7 +2331,9 @@ const FORTUNE_ENDPOINT = '/api/fortune';
 async function getPeriodAI(user, scope, chart, pa, periods){
   const sig = chartSignature(user.saju);
   const who = isStudentAge() ? 's' : 'w';
-  const key = scope==='month' ? `${sig}-${who}-${periods.y}-${periods.m}-${currentLang}` : `${sig}-${who}-${periods.y}-${currentLang}`;
+  // Keyed by the period's own pillar, so the cache turns over at each 절기 (e.g. 입동), not on the 1st.
+  const yp = periods.year.stem+periods.year.branch, mp = periods.month.stem+periods.month.branch;
+  const key = scope==='month' ? `${sig}-${who}-${yp}-${mp}-${currentLang}` : `${sig}-${who}-${yp}-${currentLang}`;
   user.periodAI = user.periodAI || {};
   const cached = user.periodAI[scope];
   if(cached && cached.key===key && cached.data) return cached.data;
