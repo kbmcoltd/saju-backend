@@ -555,6 +555,15 @@
   }
   @keyframes fade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
   .hidden{display:none !important;}
+  .has-tts{position:relative;}
+  .has-tts > h2{padding-right:104px;}
+  .tts-btn{
+    position:absolute; top:18px; right:16px;
+    background:#fff; border:1px solid rgba(200,162,78,.55); color:#8a6a22;
+    border-radius:999px; padding:7px 12px; font-family:inherit; font-size:13px; font-weight:700;
+    box-shadow:0 2px 8px rgba(0,0,0,.08);
+  }
+  .tts-btn.speaking{ background:linear-gradient(135deg,var(--gold-soft),var(--gold)); color:#211a08; border-color:transparent; }
   .loading{
     text-align:center;color:var(--muted);font-size:13px;padding:30px 0;
   }
@@ -770,15 +779,17 @@
       </div>
     </div>
 
-    <div class="card card-light fortune-panel" id="fortune-panel-day">
+    <div class="card card-light fortune-panel has-tts" id="fortune-panel-day">
       <h2 data-i18n="result.fortune.title">오늘의 사주 운세</h2>
+      <button type="button" class="tts-btn" data-tts-target="fortune-panel-day" data-i18n="tts.play" onclick="toggleSpeak(this)">🔊 읽어주기</button>
       <div id="fortune-tag-wrap"></div>
       <div class="fortune-items" id="fortune-items"></div>
       <div class="fortune-date" id="fortune-date"></div>
     </div>
 
-    <div class="card card-light fortune-panel hidden" id="fortune-panel-month">
+    <div class="card card-light fortune-panel has-tts hidden" id="fortune-panel-month">
       <h2 data-i18n="result.month.title">이달의 사주 운세</h2>
+      <button type="button" class="tts-btn" data-tts-target="fortune-panel-month" data-i18n="tts.play" onclick="toggleSpeak(this)">🔊 읽어주기</button>
       <div id="month-tag-wrap"></div>
       <div id="month-summary"></div>
       <div class="fortune-items" id="month-items"></div>
@@ -786,8 +797,9 @@
       <div class="period-note" data-i18n="result.period.note">좋은 흐름과 조심할 점을 함께 보여드려요. 조심할 점은 불안을 주려는 게 아니라 미리 대비하라는 참고 신호예요.</div>
     </div>
 
-    <div class="card card-light fortune-panel hidden" id="fortune-panel-year">
+    <div class="card card-light fortune-panel has-tts hidden" id="fortune-panel-year">
       <h2 data-i18n="result.year.title">올해의 사주 운세</h2>
+      <button type="button" class="tts-btn" data-tts-target="fortune-panel-year" data-i18n="tts.play" onclick="toggleSpeak(this)">🔊 읽어주기</button>
       <div id="year-tag-wrap"></div>
       <div id="year-summary"></div>
       <div class="fortune-items" id="year-items"></div>
@@ -795,8 +807,9 @@
       <div class="period-note" data-i18n="result.period.note">좋은 흐름과 조심할 점을 함께 보여드려요. 조심할 점은 불안을 주려는 게 아니라 미리 대비하라는 참고 신호예요.</div>
     </div>
 
-    <div class="card card-light fortune-panel hidden" id="fortune-panel-life">
+    <div class="card card-light fortune-panel has-tts hidden" id="fortune-panel-life">
       <h2 data-i18n="result.life.title">일생운 (초년·중년·말년)</h2>
+      <button type="button" class="tts-btn" data-tts-target="fortune-panel-life" data-i18n="tts.play" onclick="toggleSpeak(this)">🔊 읽어주기</button>
       <p class="desc" data-i18n="result.life.desc">사주 네 기둥으로 인생의 큰 흐름을 세 시기로 나누어 봤어요.</p>
       <div class="fortune-items" id="life-items"></div>
       <div class="fortune-date" id="life-date"></div>
@@ -863,8 +876,9 @@
       <div class="err" id="palm-err"></div>
     </div>
 
-    <div class="card card-light hidden" id="palm-result-card">
+    <div class="card card-light has-tts hidden" id="palm-result-card">
       <h2 data-i18n="palm.resultTitle">AI 손금 풀이</h2>
+      <button type="button" class="tts-btn" data-tts-target="palm-result-card" data-i18n="tts.play" onclick="toggleSpeak(this)">🔊 읽어주기</button>
       <p class="fortune-text" id="palm-result-text"></p>
       <div class="disclaimer" data-i18n="palm.disclaimer">본 결과는 전통 손금 풀이 스타일을 재미로 재구성한 AI 콘텐츠이며, 의학적·과학적 진단이 아닙니다.</div>
     </div>
@@ -893,8 +907,9 @@
       <div class="err" id="face-err"></div>
     </div>
 
-    <div class="card card-light hidden" id="face-result-card">
+    <div class="card card-light has-tts hidden" id="face-result-card">
       <h2 data-i18n="face.resultTitle">AI 관상 총평</h2>
+      <button type="button" class="tts-btn" data-tts-target="face-result-card" data-i18n="tts.play" onclick="toggleSpeak(this)">🔊 읽어주기</button>
       <p class="fortune-text" id="face-result-text"></p>
       <div class="disclaimer" data-i18n="face.disclaimer">본 결과는 전통 관상 풀이 스타일을 재미로 재구성한 AI 콘텐츠이며, 외모 평가나 의학적 진단이 아닙니다.</div>
     </div>
@@ -974,6 +989,8 @@ const TRANSLATIONS = {
   'result.fortune.title': { ko: '오늘의 사주 운세', en: "Today's Fortune" },
   'result.month.title': { ko: '이달의 사주 운세', en: "This Month's Fortune" },
   'result.year.title': { ko: '올해의 사주 운세', en: "This Year's Fortune" },
+  'tts.play': { ko: '🔊 읽어주기', en: '🔊 Read aloud' },
+  'tts.stop': { ko: '⏹ 멈추기', en: '⏹ Stop' },
   'result.tabs.title': { ko: '운세 보기', en: 'Your Fortune' },
   'result.tabs.desc': { ko: '보고 싶은 운세를 눌러 주세요.', en: 'Tap the fortune you want to see.' },
   'result.tab.day': { ko: '오늘', en: 'Today' },
@@ -1092,6 +1109,7 @@ function applyTranslations(){
 }
 
 function setLang(lang){
+  stopSpeak();
   currentLang = lang;
   try{ localStorage.setItem(LS_PREFIX_LANG, lang); }catch(e){}
   applyTranslations();
@@ -1178,6 +1196,7 @@ let suppressHistoryPush = false;
 
 function showScreen(name, opts){
   opts = opts || {};
+  if(typeof stopSpeak==='function') stopSpeak();
   ['signup','login','reset','home','birth','result','lucky','palm','face'].forEach(s=>{
     document.getElementById('screen-'+s).classList.toggle('hidden', s!==name);
   });
@@ -2364,12 +2383,112 @@ function applyAIToLife(reading, ai){
   }) };
 }
 
+/* ---------------- 읽어주기 (read aloud) ----------------
+   Uses the phone's built-in text-to-speech (Web Speech API), so it costs nothing and
+   needs no server. The card's visible text is cleaned up (emoji, hanja in brackets,
+   symbols) and spoken sentence by sentence, because some Android voices cut off long
+   utterances. Only one card speaks at a time; changing screen or tab stops it. */
+const ttsSupported = typeof window!=='undefined' && 'speechSynthesis' in window && typeof SpeechSynthesisUtterance!=='undefined';
+let ttsActiveBtn = null;
+let ttsRunId = 0;
+
+function ttsCleanText(raw){
+  return raw
+    .replace(/[\u3400-\u9FFF]+/g, m=>'')                // hanja (庚戌, 正官 …)
+    .replace(/\(\s*\)/g, '')                           // brackets left empty by the line above
+    .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{200D}]/gu, '') // emoji / pictographs
+    .replace(/[✔·•|]/g, ' ')
+    .replace(/(\d+\s*대)\s*~\s*(\d+\s*대)/g, '$1에서 $2')   // 30대 ~ 50대 -> 30대에서 50대
+    .replace(/\s*~\s*/g, ' ')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\s*\n\s*/g, '\n')
+    .trim();
+}
+function ttsChunks(text){
+  const out = [];
+  text.split('\n').forEach(line=>{
+    // A heading or label line has no full stop; add one so the voice pauses after it.
+    line = line.trim();
+    if(line && !/[.!?。,]$/.test(line)) line += '.';
+    (line.match(/[^.!?。]+[.!?。]*/g) || []).forEach(part=>{
+      const p = part.trim();
+      if(!p) return;
+      if(out.length && (out[out.length-1].length + p.length) < 120) out[out.length-1] += ' ' + p;
+      else out.push(p);
+    });
+  });
+  return out;
+}
+function pickVoice(langPrefix){
+  const voices = window.speechSynthesis.getVoices() || [];
+  const same = voices.filter(v=> (v.lang||'').toLowerCase().replace('_','-').startsWith(langPrefix));
+  return same.find(v=>/google/i.test(v.name)) || same.find(v=>v.localService) || same[0] || null;
+}
+function setTtsBtnState(btn, speaking){
+  if(!btn) return;
+  btn.classList.toggle('speaking', speaking);
+  btn.textContent = t(speaking ? 'tts.stop' : 'tts.play');
+}
+function stopSpeak(){
+  if(!ttsSupported) return;
+  ttsRunId++;
+  try{ window.speechSynthesis.cancel(); }catch(e){}
+  setTtsBtnState(ttsActiveBtn, false);
+  ttsActiveBtn = null;
+}
+function toggleSpeak(btn){
+  if(!ttsSupported) return;
+  if(ttsActiveBtn===btn){ stopSpeak(); return; }
+  stopSpeak();
+  const target = document.getElementById(btn.dataset.ttsTarget);
+  if(!target) return;
+  const clone = target.cloneNode(true);
+  clone.querySelectorAll('button, .tts-btn').forEach(el=>el.remove());
+  // innerText needs a rendered node; use a hidden off-screen copy to keep line breaks.
+  clone.style.cssText = 'position:fixed;left:-9999px;top:0;width:360px;';
+  clone.classList.remove('hidden');
+  document.body.appendChild(clone);
+  const text = ttsCleanText(clone.innerText || clone.textContent || '');
+  clone.remove();
+  const chunks = ttsChunks(text);
+  if(!chunks.length) return;
+
+  const isEn = currentLang==='en';
+  const lang = isEn ? 'en-US' : 'ko-KR';
+  const voice = pickVoice(isEn ? 'en' : 'ko');
+  const runId = ++ttsRunId;
+  ttsActiveBtn = btn;
+  setTtsBtnState(btn, true);
+  let i = 0;
+  const speakNext = ()=>{
+    if(runId!==ttsRunId) return;
+    if(i>=chunks.length){ setTtsBtnState(btn, false); if(ttsActiveBtn===btn) ttsActiveBtn = null; return; }
+    const u = new SpeechSynthesisUtterance(chunks[i++]);
+    u.lang = lang;
+    if(voice) u.voice = voice;
+    u.rate = 0.95;
+    u.onend = speakNext;
+    u.onerror = ()=>{ if(runId===ttsRunId){ setTtsBtnState(btn, false); ttsActiveBtn = null; } };
+    window.speechSynthesis.speak(u);
+  };
+  speakNext();
+}
+if(ttsSupported){
+  // Voices load asynchronously on some devices; touching the list early warms it up.
+  try{ window.speechSynthesis.getVoices(); window.speechSynthesis.onvoiceschanged = ()=>{}; }catch(e){}
+  window.addEventListener('pagehide', stopSpeak);
+  document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') stopSpeak(); });
+} else {
+  document.querySelectorAll('.tts-btn').forEach(b=>b.classList.add('hidden'));
+}
+
 // 오늘 / 이달 / 올해 / 일생: only the selected fortune card is shown.
 const FORTUNE_TABS = ['day','month','year','life'];
 let currentFortuneTab = 'day';
 function selectFortuneTab(tab){
   if(!FORTUNE_TABS.includes(tab)) tab = 'day';
   currentFortuneTab = tab;
+  stopSpeak();
   document.querySelectorAll('.fortune-tabs .cal-toggle-btn').forEach(b=> b.classList.toggle('active', b.dataset.tab===tab));
   FORTUNE_TABS.forEach(k=> document.getElementById('fortune-panel-'+k).classList.toggle('hidden', k!==tab));
 }
