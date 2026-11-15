@@ -425,7 +425,7 @@
     font-size:12.5px;
     line-height:1.6;
   }
-  .fortune-caution b{ font-weight:700; }
+  .fortune-caution b{ font-weight:700; display:block; margin-bottom:2px; }
   .period-summary{
     border-radius:10px;
     padding:10px 12px;
@@ -1012,7 +1012,7 @@ const TRANSLATIONS = {
   'result.period.note': { ko: '좋은 흐름과 조심할 점을 함께 보여드려요. 조심할 점은 불안을 주려는 게 아니라 미리 대비하라는 참고 신호예요.', en: 'We show both the good flow and the things to watch out for. Cautions are gentle heads-ups to prepare, not predictions to worry about.' },
   'fortune.summary.good': { ko: '✨ 좋은 흐름', en: '✨ Good Flow' },
   'fortune.summary.caution': { ko: '⚠️ 조심할 점', en: '⚠️ Watch Out For' },
-  'fortune.caution.prefix': { ko: '조심', en: 'Caution' },
+  'fortune.caution.prefix': { ko: '조심할 점', en: 'Watch out for' },
   'fortune.todayCaution': { ko: '⚠️ 오늘의 주의사항', en: "⚠️ Today's Cautions" },
   'fortune.points': { ko: '🔎 내 사주로 본 포인트', en: '🔎 Points from your chart' },
   'fortune.aiPending': { ko: '내 사주에 맞춰 풀이 중…', en: 'tailoring to your chart…' },
@@ -2712,7 +2712,7 @@ function makeCautionEl(text, noPrefix){
   el.className = 'fortune-caution';
   if(!noPrefix){
     const b = document.createElement('b');
-    b.textContent = `⚠️ ${t('fortune.caution.prefix')} `;
+    b.textContent = `⚠️ ${t('fortune.caution.prefix')}`;
     el.appendChild(b);
   }
   el.appendChild(document.createTextNode(text));
