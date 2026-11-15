@@ -1088,7 +1088,7 @@ let currentLang = 'ko';
 
 function t(key, vars){
   const entry = TRANSLATIONS[key];
-  let text = entry ? (entry[currentLang] || entry.ko) : key;
+  let text = entry ? (typeof entry[currentLang]==='string' ? entry[currentLang] : entry.ko) : key;
   if(vars){
     Object.keys(vars).forEach(k=>{ text = text.replace(new RegExp('\\{'+k+'\\}','g'), vars[k]); });
   }
@@ -1712,7 +1712,27 @@ function elementLabel(el){ return currentLang==='en' ? ELEMENT_LABEL_EN[el] : EL
 // as the underlying data; only the display changes by language).
 const STEM_ROMAN = { '갑':'Gap','을':'Eul','병':'Byeong','정':'Jeong','무':'Mu','기':'Gi','경':'Gyeong','신':'Sin','임':'Im','계':'Gye' };
 const BRANCH_ROMAN = { '자':'Ja','축':'Chuk','인':'In','묘':'Myo','진':'Jin','사':'Sa','오':'O','미':'Mi','신':'Sin','유':'Yu','술':'Sul','해':'Hae' };
-function romanizePillar(p){ return currentLang==='en' ? `${STEM_ROMAN[p.stem]} ${BRANCH_ROMAN[p.branch]}` : `${p.stem}${p.branch}`; }
+function romanizePillar(p){ return currentLang==='en' ? `${STEM_ROMAN[p.stem]}${BRANCH_ROMAN[p.branch]}` : `${p.stem}${p.branch}`; }
+
+/* Korean -> romanized, one capitalised syllable at a time ("식신" -> "SikSin", "계사" -> "GyeSa").
+   Used in English mode so traditional terms with no English word (and any Korean that slips
+   into AI text) are shown by their sound instead of in Hangul. Syllable-by-syllable Revised
+   Romanization, without sound-change rules, so each syllable stays recognisable. */
+const RR_INITIAL = ['g','kk','n','d','tt','r','m','b','pp','s','ss','','j','jj','ch','k','t','p','h'];
+const RR_MEDIAL = ['a','ae','ya','yae','eo','e','yeo','ye','o','wa','wae','oe','yo','u','wo','we','wi','yu','eu','ui','i'];
+const RR_FINAL = ['','k','k','k','n','n','n','t','l','k','m','l','l','l','p','l','m','p','p','t','t','ng','t','t','k','t','p','t'];
+function romanizeSyllable(ch){
+  const code = ch.charCodeAt(0) - 0xAC00;
+  if(code<0 || code>11171) return ch;
+  const ini = Math.floor(code/588), med = Math.floor((code%588)/28), fin = code%28;
+  const r = RR_INITIAL[ini] + RR_MEDIAL[med] + RR_FINAL[fin];
+  return r.charAt(0).toUpperCase() + r.slice(1);
+}
+function romanizeHangul(text){
+  return String(text).replace(/[가-힣]+/g, w=> w.split('').map(romanizeSyllable).join(''));
+}
+// Text shown to the user: romanize any Hangul in English mode, leave it alone in Korean.
+function ui(text){ return currentLang==='en' ? romanizeHangul(text) : text; }
 
 const FORTUNE_CATEGORY_LABEL_KO = { work:'사업·일운', money:'금전운', love:'연애운', health:'건강운' };
 const FORTUNE_CATEGORY_LABEL_EN = { work:'Career', money:'Money', love:'Love', health:'Wellness' };
@@ -2340,7 +2360,7 @@ function renderLifeCard(reading, pending){
     basis.textContent = it.basis;
     const good = document.createElement('div');
     good.className = 'fortune-good';
-    good.textContent = it.good;
+    good.textContent = ui(it.good);
     row.append(label, basis, good, makeCautionEl(it.caution));
     wrap.appendChild(row);
   });
@@ -2715,7 +2735,7 @@ function makeCautionEl(text, noPrefix){
     b.textContent = `⚠️ ${t('fortune.caution.prefix')}`;
     el.appendChild(b);
   }
-  el.appendChild(document.createTextNode(text));
+  el.appendChild(document.createTextNode(ui(text)));
   return el;
 }
 
@@ -2726,7 +2746,7 @@ function makeSummaryEl(kind, text){
   label.className = 'ps-label';
   label.textContent = t(kind==='good' ? 'fortune.summary.good' : 'fortune.summary.caution');
   const body = document.createElement('div');
-  body.textContent = text;
+  body.textContent = ui(text);
   box.append(label, body);
   return box;
 }
@@ -2738,7 +2758,7 @@ function renderPeriodCard(prefix, reading, tagText, dateText, notes, pending){
   tagWrap.innerHTML = '';
   const tag = document.createElement('span');
   tag.className = 'fortune-tag';
-  tag.textContent = tagText;
+  tag.textContent = ui(tagText);
   tagWrap.appendChild(tag);
 
   const summary = document.getElementById(prefix+'-summary');
@@ -2758,7 +2778,7 @@ function renderPeriodCard(prefix, reading, tagText, dateText, notes, pending){
     notes.good.forEach(txt=>{
       const g = document.createElement('div');
       g.className = 'fortune-good';
-      g.textContent = '✔ ' + txt;
+      g.textContent = '✔ ' + ui(txt);
       row.appendChild(g);
     });
     notes.caution.forEach(txt=> row.appendChild(makeCautionEl(txt, true)));
@@ -2772,7 +2792,7 @@ function renderPeriodCard(prefix, reading, tagText, dateText, notes, pending){
     label.textContent = `${c.icon} ${c.label}`;
     const good = document.createElement('div');
     good.className = 'fortune-good';
-    good.textContent = c.good;
+    good.textContent = ui(c.good);
     row.append(label, good, makeCautionEl(c.caution));
     items.appendChild(row);
   });
@@ -2796,7 +2816,7 @@ function renderFortuneItems(items, reading){
 
     const text = document.createElement('div');
     text.className = 'fortune-item-text';
-    text.textContent = item.text;
+    text.textContent = ui(item.text);
 
     row.append(label, text);
 
@@ -2930,7 +2950,7 @@ async function analyzePhoto(type){
   btn.textContent = t('msg.analyzing');
   try{
     const resultText = await callBackendAnalyze(type, state.base64, state.mediaType);
-    document.getElementById(type+'-result-text').textContent = resultText;
+    document.getElementById(type+'-result-text').textContent = ui(resultText);
     document.getElementById(type+'-result-card').classList.remove('hidden');
   }catch(e){
     console.error(e);
