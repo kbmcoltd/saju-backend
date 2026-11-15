@@ -986,6 +986,7 @@ const TRANSLATIONS = {
   'birth.leapMonth': { ko: '윤달(閏月)입니다', en: 'This is a leap month' },
   'birth.hourLabel': { ko: '태어난 시각', en: 'Birth Time' },
   'birth.hourHint': { ko: '한국 경도(동경 127도) 기준으로 시간을 30분 늦춰 적용했어요. 예: 01:15 출생은 자시(23:30~01:30)입니다.', en: "Hours are shifted 30 minutes later for Korea's longitude (127°E). E.g. born at 01:15 = Hour of the Rat (23:30~01:30)." },
+  'birth.hourHintDST': { ko: '이 날짜는 서머타임 기간이라 시계가 1시간 빨랐어요. 시간 목록에 서머타임 1시간을 더해 보여드리니, 알고 있는 출생 시각 그대로 고르시면 돼요.', en: 'This date was in daylight saving time, when clocks ran 1 hour ahead. The list already includes that hour, so just pick the birth time you know.' },
   'birth.hourHint1275': { ko: '1954.3.21~1961.8.9 출생은 당시 표준시(동경 127.5도) 기준이라 30분 보정 없이 정시를 적용해요.', en: 'Births from 1954-03-21 to 1961-08-09 use the standard time of that period (127.5°E), so no 30-minute shift is applied.' },
   'birth.submit': { ko: '사주 풀이 보기', en: 'See My Saju Reading' },
   'result.pillars.title': { ko: '사주팔자 (四柱八字)', en: 'Saju (Four Pillars)' },
@@ -1491,10 +1492,32 @@ function isKst1275Period(y, m, d){
   const v = y*10000 + m*100 + d;
   return v >= 19540321 && v <= 19610809;
 }
-function hourRangeText(idx, plainHours){
+/* 서머타임 (daylight saving) in Korea: clocks ran one hour ahead, so a time written on a birth
+   certificate from these summers is one hour later than standard time. We show each 시
+   one hour later for those dates, so the person can simply pick the clock time they were
+   told. Dates from the IANA tz database (Rule ROK). In 1948-60 DST began at 00:00 and ended
+   at 24:00 on the listed days (both whole days count); in 1987-88 it ended at 03:00, so the
+   last listed day here is the day before. */
+const KOREA_DST_RANGES = [
+  [19480601,19480912],[19490403,19490910],[19500401,19500909],[19510506,19510908],
+  [19550505,19550908],[19560520,19560929],[19570505,19570921],[19580504,19580920],
+  [19590503,19590919],[19600501,19600917],[19870510,19871010],[19880508,19881008]
+];
+function isKoreaDST(y, m, d){
+  if(!y || !m || !d) return false;
+  const v = y*10000 + m*100 + d;
+  return KOREA_DST_RANGES.some(([a,b])=> v>=a && v<=b);
+}
+// Clock-time range of a 시 for a given (solar) birth date: +30 min for Korea's longitude
+// (except 1954-03-21 ~ 1961-08-09), +1 hour during 서머타임.
+function hourRangeFor(idx, y, m, d){
+  return hourRangeText(idx, isKst1275Period(y, m, d), isKoreaDST(y, m, d));
+}
+function hourRangeText(idx, plainHours, dst){
   const pad = n => String(n).padStart(2,'0');
   const mm = plainHours ? '00' : '30';
-  const start = (idx*2 + 23) % 24, end = (idx*2 + 1) % 24;
+  const shift = dst ? 1 : 0;
+  const start = (idx*2 + 23 + shift) % 24, end = (idx*2 + 1 + shift) % 24;
   return `${pad(start)}:${mm}~${pad(end)}:${mm}`;
 }
 // Solar date currently chosen on the birth form (lunar input converted), or null.
@@ -1513,14 +1536,15 @@ function refreshHourLabels(){
   if(!hourSel) return;
   const sd = birthFormSolarDate();
   const plain = sd ? isKst1275Period(sd.y, sd.m, sd.d) : false;
+  const dst = sd ? isKoreaDST(sd.y, sd.m, sd.d) : false;
   Array.from(hourSel.options).forEach(opt=>{
     if(opt.value==='unknown') return;
     const idx = parseInt(opt.value);
     const info = HOUR_BRANCH_INFO[idx];
-    opt.textContent = `${currentLang==='en' ? info.en : info.ko} (${hourRangeText(idx, plain)})`;
+    opt.textContent = `${currentLang==='en' ? info.en : info.ko} (${hourRangeText(idx, plain, dst)})`;
   });
   const hint = document.getElementById('hour-hint');
-  if(hint) hint.textContent = t(plain ? 'birth.hourHint1275' : 'birth.hourHint');
+  if(hint) hint.textContent = dst ? t('birth.hourHintDST') : t(plain ? 'birth.hourHint1275' : 'birth.hourHint');
 }
 
 function fillBirthSelects(){
@@ -2728,7 +2752,7 @@ async function renderResult(){
   const {y,m,d,hourVal} = birth;
   const hourText = hourVal==='unknown'
     ? t('birth.timeUnknown')
-    : `${currentLang==='en' ? HOUR_BRANCH_INFO[parseInt(hourVal)].en : HOUR_BRANCH_INFO[parseInt(hourVal)].ko}(${hourRangeText(parseInt(hourVal), isKst1275Period(y, m, d))})`;
+    : `${currentLang==='en' ? HOUR_BRANCH_INFO[parseInt(hourVal)].en : HOUR_BRANCH_INFO[parseInt(hourVal)].ko}(${hourRangeFor(parseInt(hourVal), y, m, d)})`;
 
   let birthDesc;
   if(birth.calendarType==='lunar'){
