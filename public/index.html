@@ -609,7 +609,7 @@
       <button class="btn-primary" data-i18n="signup.submit" onclick="handleSignup()">가입하고 시작하기</button>
     </div>
     <div class="link-row"><span data-i18n="signup.haveAccount">이미 계정이 있으신가요? </span><a data-i18n="nav.login" onclick="showScreen('login')">로그인</a></div>
-    <div class="link-row"><a href="/privacy.html" target="_blank" rel="noopener" data-i18n="home.privacyLink">개인정보처리방침</a></div>
+    <div class="link-row"><a href="/terms.html" target="_blank" rel="noopener" data-i18n="home.termsLink">이용약관</a> · <a href="/privacy.html" target="_blank" rel="noopener" data-i18n="home.privacyLink">개인정보처리방침</a></div>
   </div>
 
   <!-- LOGIN -->
@@ -701,6 +701,8 @@
     </div>
 
     <div class="home-footer-links">
+      <a href="/terms.html" target="_blank" rel="noopener" data-i18n="home.termsLink">이용약관</a>
+      <span aria-hidden="true">·</span>
       <a href="/privacy.html" target="_blank" rel="noopener" data-i18n="home.privacyLink">개인정보처리방침</a>
       <span aria-hidden="true">·</span>
       <a onclick="handleDeleteAccount()" data-i18n="home.deleteAccountLink">회원 탈퇴</a>
@@ -972,6 +974,7 @@ const TRANSLATIONS = {
   'home.face.label': { ko: '관상 보기', en: 'Face Reading' },
   'home.face.sub': { ko: '얼굴 사진으로 보는 AI 인상 총평', en: 'AI face reading from a photo of your face' },
   'home.privacyLink': { ko: '개인정보처리방침', en: 'Privacy Policy' },
+  'home.termsLink': { ko: '이용약관', en: 'Terms of Service' },
   'home.deleteAccountLink': { ko: '회원 탈퇴', en: 'Delete Account' },
   'account.deleteConfirm': { ko: '정말 탈퇴하시겠어요? 계정과 관련 데이터가 즉시 삭제되며 되돌릴 수 없습니다.', en: 'Are you sure you want to delete your account? This immediately and permanently removes your account and data.' },
   'account.deletePasswordPrompt': { ko: '본인 확인을 위해 비밀번호를 입력해 주세요.', en: 'Please enter your password to confirm.' },
