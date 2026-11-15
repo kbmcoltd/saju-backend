@@ -543,6 +543,11 @@ app.post('/api/fortune', requireAuth, async (req, res) => {
     const workName = student ? 'study (academics, exams, school life, learning habits)' : 'work (career/business)';
 
     const language = lang === 'en' ? 'English' : 'Korean';
+    // In English the app shows traditional terms by their sound ("SikSin", "GyeSa"), never in Hangul.
+    const enTerms = lang === 'en'
+      ? `Write only in English and never output Korean (Hangul) characters. When you name a heavenly stem, earthly branch, pillar or ten god, ` +
+        `write it romanized with each syllable capitalised, optionally followed by the hanja, e.g. SikSin (食神), GyeSa (癸巳), Gap (甲), Ja (子). `
+      : '';
     const okStem = (s) => (STEM_SET.includes(s) ? s : '?');
     const okBranch = (b) => (BRANCH_SET.includes(b) ? b : '?');
     const hourPart = STEM_SET.includes(hourStem) && BRANCH_SET.includes(hourBranch)
@@ -566,7 +571,7 @@ app.post('/api/fortune', requireAuth, async (req, res) => {
           `Keep everything age-appropriate and about school, study, friends and family; for "money" talk only about allowance, saving and spending habits (no investing or business), ` +
           `and for "love" keep it innocent (friendship, getting along with peers, first feelings) with nothing romantic or adult. `
         : '') +
-      `Call the tool with the result.`;
+      enTerms + `Call the tool with the result.`;
 
     let promptText;
     let tool;
@@ -599,7 +604,7 @@ app.post('/api/fortune', requireAuth, async (req, res) => {
         `Tone: warm, entertainment-only and constructive. Be honest about what to watch out for, but frame cautions as habits, timing and ` +
         `choices to be careful with, never as fate. Do not make medical, illness, accident, death, divorce or lawsuit predictions, and do not state a lifespan. ` +
         (student ? `This person is a student aged 18 or under: keep everything age-appropriate and encouraging, with nothing romantic or adult. ` : '') +
-        `Call the tool with the result.`;
+        enTerms + `Call the tool with the result.`;
 
       const message = await anthropic.messages.create({
         model: CLAUDE_MODEL,
